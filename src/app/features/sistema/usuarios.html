@@ -1,0 +1,117 @@
+<div class="pila">
+  <app-page-header seccion="Sistema" titulo="Usuarios" descripcion="Cuentas de acceso al sistema y el rol que define qué puede ver cada una.">
+    <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nuevo usuario</button>
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Usuarios" [valor]="usuarios().length" icono="escudo" [cargando]="cargando()" />
+    <app-stat-card style="--i: 1" titulo="Activos" [valor]="activos()" icono="checkCirculo" tono="exito" [cargando]="cargando()"
+      [detalle]="usuarios().length - activos() + ' desactivados'" />
+  </section>
+
+  <article class="card entrada">
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar usuario o rol…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Usuario</th><th>Rol</th><th>Permisos</th><th class="right">Activo</th></tr>
+          </thead>
+          <tbody>
+            @for (u of tabla.visibles(); track u.id; let i = $index) {
+              <tr [style.--i]="i" [style.opacity]="u.activo ? 1 : 0.6">
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(u.username)">{{ iniciales(u.username) }}</span>
+                    <div>
+                      <strong class="mono">{{ u.username }}</strong>
+                      @if (u.username === usuarioActual) { <small>Tu cuenta</small> }
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge" [class.badge-brand]="u.rol === 'ADMIN'">{{ nombresRol[u.rol] }}</span></td>
+                <td class="ink-2" style="max-width: 360px">{{ descripcionRol[u.rol] }}</td>
+                <td>
+                  <div class="acciones" style="opacity: 1">
+                    <button type="button" class="switch" [class.on]="u.activo" role="switch" [attr.aria-checked]="u.activo"
+                      [attr.aria-label]="(u.activo ? 'Desactivar ' : 'Activar ') + u.username"
+                      [disabled]="u.username === usuarioActual || cambiandoId() === u.id" (click)="alternarEstado(u)"></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="escudo" titulo="Sin usuarios" texto="No hay cuentas que coincidan con la búsqueda." />
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Sistema" titulo="Nuevo usuario"
+  descripcion="La contraseña se guarda cifrada; comunícala al usuario por un canal seguro.">
+  <form id="form-usuario" class="pila" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo">
+      <label for="u-user">Usuario</label>
+      <div class="control-icono">
+        <app-icon name="usuario" [size]="17" />
+        <input id="u-user" class="control mono" formControlName="username" autocomplete="off" placeholder="ej. jperez" />
+      </div>
+      <app-error-campo [control]="form.controls.username" [mensajes]="{ pattern: 'De 3 a 50 caracteres: letras, números, punto o guion.' }" />
+    </div>
+    <div class="campo">
+      <label for="u-pass">Contraseña</label>
+      <div class="control-icono">
+        <app-icon name="candado" [size]="17" />
+        <input id="u-pass" class="control" formControlName="password" autocomplete="new-password" [type]="verClave() ? 'text' : 'password'" />
+      </div>
+      <label class="ayuda" style="display: flex; gap: 6px; align-items: center; cursor: pointer">
+        <input type="checkbox" [checked]="verClave()" (change)="verClave.set(!verClave())" /> Mostrar contraseña
+      </label>
+      <app-error-campo [control]="form.controls.password" />
+    </div>
+    <div class="campo">
+      <label>Rol</label>
+      <div class="roles">
+        @for (r of roles; track r) {
+          <label class="rol" [class.elegido]="form.controls.rol.value === r">
+            <input type="radio" formControlName="rol" [value]="r" class="visually-hidden" />
+            <strong>{{ nombresRol[r] }}</strong>
+            <small>{{ descripcionRol[r] }}</small>
+          </label>
+        }
+      </div>
+    </div>
+    <div class="campo">
+      <label for="u-trab">Trabajador vinculado{{ esPersonal(form.controls.rol.value) ? '' : ' (opcional)' }}</label>
+      <select id="u-trab" class="control" formControlName="trabajadorId">
+        <option [ngValue]="null">— Sin vincular —</option>
+        @for (t of trabajadores(); track t.id) {
+          <option [ngValue]="t.id">{{ t.nombres }} · {{ t.documentoIdentidad }}</option>
+        }
+      </select>
+      @if (esPersonal(form.controls.rol.value)) {
+        <small class="ayuda">Este rol entra a "Mi espacio" y debe estar ligado a la ficha de un trabajador activo.</small>
+      }
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-usuario" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Creando… } @else { <app-icon name="check" [size]="17" /> Crear usuario }
+    </button>
+  </ng-container>
+</app-panel>
