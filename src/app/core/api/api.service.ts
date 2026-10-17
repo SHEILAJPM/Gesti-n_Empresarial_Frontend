@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_URL } from '../config/constantes';
 import {
-  CeseRequest, Cliente, ClienteRequest, EstadoFacturacion, IntentoMarcacion, MiBoleta, MiPerfil, Sede, TipoComprobante, Compra, CompraRequest, ConfiguracionTributaria, Documento, DocumentoRequest,
+  CeseRequest, Cliente, ClienteRequest, DocumentoConsultado, EstadoFacturacion, IntentoMarcacion, MiBoleta, MiPerfil, Sede, TipoComprobante, Compra, CompraRequest, ConfiguracionTributaria, Documento, DocumentoRequest,
   Marcacion, MarcarRequest, Pago, PagoRequest, Planilla, Proveedor, ProveedorRequest, ResumenTributario, Simulacion,
   Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest
 } from '../models';
@@ -54,6 +54,10 @@ export class ApiService {
     consultarSunat: (id: number) => this.get<Venta>(`/api/ventas/${id}/sunat`),
     reenviarSunat: (id: number) => this.post<Venta>(`/api/ventas/${id}/sunat/reenviar`, null),
     siguienteNumero: (tipo: TipoComprobante) => this.get<{ numero: string }>('/api/ventas/siguiente-numero', { tipo })
+  };
+
+  readonly consultas = {
+    documento: (numero: string) => this.get<DocumentoConsultado>(`/api/consultas/documento/${numero}`)
   };
 
   readonly facturacion = {

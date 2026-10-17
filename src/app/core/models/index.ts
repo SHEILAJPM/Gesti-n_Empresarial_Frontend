@@ -146,6 +146,16 @@ export interface ProveedorRequest {
   direccion: string | null;
 }
 
+/* Respuesta de /api/consultas/documento: RENIEC para DNI, SUNAT para RUC (dirección, estado y condición solo con RUC) */
+export interface DocumentoConsultado {
+  documento: string;
+  tipo: TipoDocumento;
+  nombre: string;
+  direccion: string | null;
+  estado: string | null;
+  condicion: string | null;
+}
+
 export interface Cliente {
   id: number;
   documento: string;

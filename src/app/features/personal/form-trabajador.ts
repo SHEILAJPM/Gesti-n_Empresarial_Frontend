@@ -6,6 +6,7 @@ import { mensajeDeError } from '../../core/api/errores';
 import { Trabajador } from '../../core/models';
 import { ToastService } from '../../core/ui/toast.service';
 import { ErrorCampo } from '../../shared/bloques';
+import { ConsultaDocumento, EstadoConsulta } from '../../shared/consulta-documento';
 import { hoyIso } from '../../shared/formato';
 import { Icon } from '../../shared/icon';
 import { Panel } from '../../shared/panel';
@@ -16,7 +17,7 @@ const BANCOS = ['BCP', 'BBVA', 'Interbank', 'Scotiabank', 'Banco de la Nación',
 /* Panel con la ficha completa del trabajador; sirve para registrar y para editar */
 @Component({
   selector: 'app-form-trabajador',
-  imports: [ReactiveFormsModule, Panel, Icon, ErrorCampo],
+  imports: [ReactiveFormsModule, Panel, Icon, ErrorCampo, EstadoConsulta],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-panel [abierto]="abierto()" (cerrar)="cerrar.emit()" etiqueta="Recursos humanos"
@@ -24,19 +25,22 @@ const BANCOS = ['BCP', 'BBVA', 'Interbank', 'Scotiabank', 'Banco de la Nación',
       [descripcion]="trabajador() ? 'El documento de identidad no se puede cambiar.' : 'El trabajador queda activo al registrarlo.'">
       <form id="form-trabajador" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
         <h4 class="form-seccion completo"><app-icon name="usuario" [size]="15" /> Datos personales</h4>
-        <div class="campo completo">
-          <label for="t-nombres">Nombres y apellidos</label>
-          <input id="t-nombres" class="control" formControlName="nombres" placeholder="Ej. María López Torres" />
-          <app-error-campo [control]="form.controls.nombres" />
-        </div>
+        <!-- Primero el documento: con un DNI los nombres se completan solos desde RENIEC -->
         <div class="campo">
           <label for="t-doc">DNI o carné de extranjería</label>
-          <input id="t-doc" class="control mono" formControlName="documentoIdentidad" maxlength="12" placeholder="12345678" />
+          <input #doc id="t-doc" class="control mono" formControlName="documentoIdentidad" maxlength="12" placeholder="12345678"
+            (input)="consulta.escribir(doc.value)" />
+          <app-estado-consulta [consulta]="consulta" />
           <app-error-campo [control]="form.controls.documentoIdentidad" [mensajes]="{ pattern: 'DNI de 8 dígitos o CE de 9 a 12 caracteres.' }" />
         </div>
         <div class="campo">
           <label for="t-nac">Fecha de nacimiento <span class="muted">(opcional)</span></label>
           <input id="t-nac" type="date" class="control" formControlName="fechaNacimiento" [max]="hoy" />
+        </div>
+        <div class="campo completo">
+          <label for="t-nombres">Nombres y apellidos</label>
+          <input id="t-nombres" class="control" formControlName="nombres" placeholder="Se completa con el DNI · Ej. María López Torres" />
+          <app-error-campo [control]="form.controls.nombres" />
         </div>
         <div class="campo">
           <label for="t-tel">Teléfono <span class="muted">(opcional)</span></label>
@@ -150,6 +154,15 @@ export class FormTrabajador {
     numeroCuenta: ['', Validators.pattern(/^[0-9-]{6,30}$/)]
   });
 
+  /* Con el DNI (no con carné de extranjería) se traen los nombres de RENIEC, sin pisar lo escrito a mano */
+  protected readonly consulta = new ConsultaDocumento(/^\d{8}$/, (d) => {
+    const nombres = this.form.controls.nombres;
+    if (!nombres.dirty || !nombres.value.trim()) {
+      nombres.setValue(d.nombre.slice(0, 150));
+      nombres.markAsPristine();
+    }
+  });
+
   private readonly sistema = toSignal(this.form.controls.sistemaPension.valueChanges, { initialValue: '' });
   protected readonly esAfp = () => this.sistema() === 'AFP';
 
@@ -176,6 +189,7 @@ export class FormTrabajador {
         banco: t?.banco ?? '',
         numeroCuenta: t?.numeroCuenta ?? ''
       });
+      this.consulta.reiniciar();
       if (t) {
         this.form.controls.documentoIdentidad.disable();
       } else {

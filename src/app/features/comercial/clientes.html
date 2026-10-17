@@ -87,11 +87,13 @@
       <label for="c-doc">DNI o RUC</label>
       <div class="control-icono">
         <app-icon name="documento" [size]="17" />
-        <input id="c-doc" class="control mono" formControlName="documento" inputmode="numeric" maxlength="11" placeholder="8 u 11 dígitos" />
+        <input #doc id="c-doc" class="control mono" formControlName="documento" inputmode="numeric" maxlength="11" placeholder="8 u 11 dígitos"
+          (input)="consulta.escribir(doc.value)" />
       </div>
       @if (tipoDetectado(); as tipo) {
         <span class="ayuda text-success">Detectado: {{ tipo === 'RUC' ? 'RUC — se emitirán facturas' : 'DNI — se emitirán boletas' }}</span>
       }
+      <app-estado-consulta [consulta]="consulta" />
       <app-error-campo [control]="form.controls.documento" [mensajes]="{ pattern: 'Ingresa un DNI de 8 dígitos o un RUC de 11.' }" />
     </div>
     <div class="campo completo">

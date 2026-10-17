@@ -8,6 +8,7 @@ import { Compra, Proveedor } from '../../core/models';
 import { ConfirmService } from '../../core/ui/confirm.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { ErrorCampo, PageHeader, Paginador, Vacio } from '../../shared/bloques';
+import { ConsultaDocumento, EstadoConsulta } from '../../shared/consulta-documento';
 import { colorAvatar, iniciales, soles } from '../../shared/formato';
 import { Icon } from '../../shared/icon';
 import { Panel } from '../../shared/panel';
@@ -21,7 +22,7 @@ interface FilaProveedor extends Proveedor {
 
 @Component({
   selector: 'app-proveedores',
-  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo],
+  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo, EstadoConsulta],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './proveedores.html'
 })
@@ -62,6 +63,20 @@ export class Proveedores {
     direccion: ['', Validators.maxLength(200)]
   });
 
+  /* Con el RUC completo se traen la razón social y la dirección de SUNAT, sin pisar lo que el usuario escribió */
+  protected readonly consulta = new ConsultaDocumento(/^(10|15|17|20)\d{9}$/, (d) => {
+    const razon = this.form.controls.razonSocial;
+    if (!razon.dirty || !razon.value.trim()) {
+      razon.setValue(d.nombre.slice(0, 150));
+      razon.markAsPristine();
+    }
+    const direccion = this.form.controls.direccion;
+    if (d.direccion && (!direccion.dirty || !direccion.value.trim())) {
+      direccion.setValue(d.direccion.slice(0, 200));
+      direccion.markAsPristine();
+    }
+  });
+
   constructor() {
     this.cargar();
     effect(() => {
@@ -89,6 +104,7 @@ export class Proveedores {
   protected abrir(p?: Proveedor): void {
     this.editando.set(p ?? null);
     this.form.reset({ ruc: p?.ruc ?? '', razonSocial: p?.razonSocial ?? '', direccion: p?.direccion ?? '' });
+    this.consulta.reiniciar();
     this.panelAbierto.set(true);
   }
 

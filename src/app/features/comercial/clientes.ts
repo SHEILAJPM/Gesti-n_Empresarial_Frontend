@@ -9,6 +9,7 @@ import { Cliente, Venta } from '../../core/models';
 import { ConfirmService } from '../../core/ui/confirm.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { ErrorCampo, PageHeader, Paginador, Vacio } from '../../shared/bloques';
+import { ConsultaDocumento, EstadoConsulta } from '../../shared/consulta-documento';
 import { colorAvatar, iniciales, soles } from '../../shared/formato';
 import { Icon } from '../../shared/icon';
 import { Panel } from '../../shared/panel';
@@ -22,7 +23,7 @@ interface FilaCliente extends Cliente {
 
 @Component({
   selector: 'app-clientes',
-  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo],
+  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo, EstadoConsulta],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './clientes.html'
 })
@@ -79,6 +80,15 @@ export class Clientes {
     return /^\d{11}$/.test(d) ? 'RUC' : /^\d{8}$/.test(d) ? 'DNI' : null;
   });
 
+  /* Al terminar de escribir el DNI o RUC se completa el nombre, salvo que el usuario ya lo haya escrito a mano */
+  protected readonly consulta = new ConsultaDocumento(/^(\d{8}|(10|15|17|20)\d{9})$/, (d) => {
+    const nombre = this.form.controls.nombre;
+    if (!nombre.dirty || !nombre.value.trim()) {
+      nombre.setValue(d.nombre.slice(0, 150));
+      nombre.markAsPristine();
+    }
+  });
+
   constructor() {
     this.cargar();
     effect(() => {
@@ -106,6 +116,7 @@ export class Clientes {
   protected abrir(cliente?: Cliente): void {
     this.editando.set(cliente ?? null);
     this.form.reset({ documento: cliente?.documento ?? '', nombre: cliente?.nombre ?? '' });
+    this.consulta.reiniciar();
     this.panelAbierto.set(true);
   }
 

@@ -73,14 +73,16 @@
 
 <app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Abastecimiento"
   [titulo]="editando() ? 'Editar proveedor' : 'Nuevo proveedor'"
-  descripcion="Próximamente: la razón social y dirección se completarán solas consultando el RUC en SUNAT.">
+  descripcion="Escribe el RUC: la razón social y la dirección se completan solas con los datos de SUNAT.">
   <form id="form-proveedor" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
     <div class="campo completo">
       <label for="p-ruc">RUC</label>
       <div class="control-icono">
         <app-icon name="edificio" [size]="17" />
-        <input id="p-ruc" class="control mono" formControlName="ruc" inputmode="numeric" maxlength="11" placeholder="20123456789" />
+        <input #ruc id="p-ruc" class="control mono" formControlName="ruc" inputmode="numeric" maxlength="11" placeholder="20123456789"
+          (input)="consulta.escribir(ruc.value)" />
       </div>
+      <app-estado-consulta [consulta]="consulta" />
       <app-error-campo [control]="form.controls.ruc" [mensajes]="{ pattern: '11 dígitos que empiezan con 10, 15, 17 o 20.' }" />
     </div>
     <div class="campo completo">
