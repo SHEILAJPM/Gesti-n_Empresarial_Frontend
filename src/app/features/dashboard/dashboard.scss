@@ -1,0 +1,151 @@
+:host { display: flex; flex-direction: column; gap: 20px; }
+
+.bienvenida {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 26px 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  animation: subir 0.55s var(--ease-out) both;
+
+  // Brillo de color en la esquina
+  &::after {
+    content: '';
+    position: absolute;
+    right: -80px;
+    top: -120px;
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--brand-glow), transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.bienvenida-texto { position: relative; z-index: 1; }
+.fecha { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.fecha::first-letter { text-transform: uppercase; }
+h1 { font-size: 28px; margin: 6px 0 8px; }
+.nombre { color: var(--brand); }
+.bienvenida p { color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.accesos { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; }
+
+// Tablero de 12 columnas
+.tablero {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.ancho-4 { grid-column: span 4; }
+.ancho-6 { grid-column: span 6; }
+.ancho-8 { grid-column: span 8; }
+.ancho-12 { grid-column: span 12; }
+
+@media (max-width: 1200px) {
+  .ancho-4 { grid-column: span 6; }
+  .ancho-8 { grid-column: span 12; }
+}
+@media (max-width: 760px) {
+  .ancho-4, .ancho-6, .ancho-8, .ancho-12 { grid-column: span 12; }
+}
+
+.centrado { display: flex; justify-content: center; }
+
+// Listas de las tarjetas
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px 12px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 12px;
+    animation: subir 0.45s var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 60ms + 200ms);
+    transition: background-color 0.2s ease;
+    &:hover { background: var(--surface-2); }
+  }
+
+  .vacio {
+    justify-content: center;
+    gap: 8px;
+    padding: 28px 10px;
+    color: var(--ink-3);
+    &:hover { background: none; }
+  }
+}
+
+.lista-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  small { color: var(--ink-3); font-size: 12.5px; }
+}
+
+.monto { font-weight: 500; white-space: nowrap; }
+.tachado { text-decoration: line-through; color: var(--ink-3); }
+
+.icono-lista {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  &.peligro { background: var(--danger-soft); color: var(--danger); }
+  &.alerta { background: var(--accent-soft); color: var(--accent); }
+}
+
+// Liquidación de IGV
+.igv-total {
+  display: flex;
+  flex-direction: column;
+  span { font-size: 13px; color: var(--ink-3); }
+  strong { font-size: 30px; font-weight: 600; color: var(--accent); letter-spacing: -0.03em; }
+  &.favor strong { color: var(--success); }
+}
+
+.igv-barra {
+  position: relative;
+  height: 10px;
+  margin: 16px 0 18px;
+  border-radius: 99px;
+  background: var(--brand);
+  overflow: hidden;
+  i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 99px;
+    background: var(--chart-2);
+    animation: llenar-barra 1.2s 0.4s var(--ease-out) both;
+  }
+}
+
+@keyframes llenar-barra { from { width: 0; } }
+
+.igv-detalle {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+  dt { color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+  dd { margin: 0; font-weight: 500; }
+  i { width: 9px; height: 9px; border-radius: 3px; }
+  .punto-brand { background: var(--brand); }
+  .punto-gris { background: var(--chart-2); }
+}

@@ -1,0 +1,225 @@
+<section class="bienvenida papel-contable">
+  <div class="bienvenida-texto">
+    <span class="fecha">{{ hoy | date: 'EEEE, d \'de\' MMMM \'de\' y' }}</span>
+    <h1>{{ saludo() }}, <span class="nombre">{{ auth.sesion()?.usuario }}</span></h1>
+    <p>Este es el resumen de tu área <span class="badge badge-brand">{{ nombreRol() }}</span></p>
+  </div>
+  <div class="accesos">
+    @if (puedeVer('ventas.editar')) {
+      <a class="btn btn-primario" routerLink="/ventas" [queryParams]="{ nuevo: 1 }"><app-icon name="mas" [size]="17" /> Nueva venta</a>
+    }
+    @if (puedeVer('compras.editar')) {
+      <a class="btn" routerLink="/compras" [queryParams]="{ nuevo: 1 }"><app-icon name="carrito" [size]="17" /> Registrar compra</a>
+    }
+    @if (puedeVer('asistencia.ver')) {
+      <a class="btn" [class.btn-primario]="!puedeVer('ventas.editar')" routerLink="/asistencia"><app-icon name="reloj" [size]="17" /> Marcar asistencia</a>
+    }
+    @if (puedeVer('pagos.ver')) {
+      <a class="btn" routerLink="/pagos" [queryParams]="{ nuevo: 1 }"><app-icon name="billetera" [size]="17" /> Programar pago</a>
+    }
+    <button type="button" class="btn btn-fantasma btn-icono" (click)="cargar()" aria-label="Actualizar datos">
+      <app-icon name="recargar" [size]="17" />
+    </button>
+  </div>
+</section>
+
+<section class="grid-kpi escalonado">
+  @if (cargando()) {
+    @for (i of [0, 1, 2, 3]; track i) {
+      <app-stat-card [style.--i]="i" titulo="Cargando…" [valor]="0" icono="panel" [cargando]="true" />
+    }
+  } @else {
+    @for (k of kpis(); track k.titulo; let i = $index) {
+      <app-stat-card [style.--i]="i" [titulo]="k.titulo" [valor]="k.valor" [icono]="k.icono" [tono]="k.tono"
+        [formato]="k.formato" [detalle]="k.detalle" [serie]="k.serie" />
+    }
+  }
+</section>
+
+@if (!cargando()) {
+  <section class="tablero escalonado">
+
+    @if (datos().ventas || datos().compras) {
+      <article class="card ancho-8" style="--i: 1">
+        <header class="card-cabecera">
+          <div>
+            <h3>Ventas vs compras</h3>
+            <p>Montos con IGV de los últimos 6 meses</p>
+          </div>
+          <a class="btn btn-sm btn-fantasma" routerLink="/ventas">Ver ventas <app-icon name="flechaDiagonal" [size]="15" /></a>
+        </header>
+        <div class="card-cuerpo">
+          <app-grafico-barras [datos]="barras()" [series]="seriesBarras" />
+        </div>
+      </article>
+    }
+
+    @if (datos().ventas) {
+      <article class="card ancho-4" style="--i: 2">
+        <header class="card-cabecera">
+          <div>
+            <h3>Comprobantes</h3>
+            <p>Distribución de ventas por tipo</p>
+          </div>
+        </header>
+        <div class="card-cuerpo centrado">
+          <app-grafico-dona [segmentos]="comprobantes()" etiquetaTotal="comprobantes" />
+        </div>
+      </article>
+    }
+
+    @if (resumenIgv(); as r) {
+      <article class="card ancho-4 igv" style="--i: 3">
+        <header class="card-cabecera">
+          <div>
+            <h3>Liquidación de IGV</h3>
+            <p>{{ r.desde | date: 'MMMM y' | titlecase }}</p>
+          </div>
+          <a class="btn btn-sm btn-fantasma" routerLink="/tributario">Detalle <app-icon name="flechaDiagonal" [size]="15" /></a>
+        </header>
+        <div class="card-cuerpo">
+          <div class="igv-total" [class.favor]="r.saldoAFavor > 0">
+            <span>{{ r.saldoAFavor > 0 ? 'Saldo a favor' : 'IGV por pagar' }}</span>
+            <strong class="num" [appContador]="r.saldoAFavor > 0 ? r.saldoAFavor : r.igvPorPagar" formato="soles"></strong>
+          </div>
+          <div class="igv-barra">
+            <i [style.width.%]="proporcionIgv(r)"></i>
+          </div>
+          <dl class="igv-detalle">
+            <div><dt><i class="punto-brand"></i>Débito fiscal (ventas)</dt><dd class="num">{{ soles(r.igvVentas) }}</dd></div>
+            <div><dt><i class="punto-gris"></i>Crédito fiscal (compras)</dt><dd class="num">{{ soles(r.igvCompras) }}</dd></div>
+            <div><dt>Operaciones</dt><dd class="num">{{ r.cantidadVentas }} ventas · {{ r.cantidadCompras }} compras</dd></div>
+          </dl>
+        </div>
+      </article>
+    }
+
+    @if (datos().ventas) {
+      <article class="card ancho-8" style="--i: 4">
+        <header class="card-cabecera">
+          <div>
+            <h3>Últimas ventas</h3>
+            <p>Comprobantes registrados recientemente</p>
+          </div>
+        </header>
+        <ul class="lista">
+          @for (v of ultimasVentas(); track v.id; let i = $index) {
+            <li [style.--i]="i">
+              <span class="avatar" [style.background]="colorAvatar(v.nombreCliente)">{{ iniciales(v.nombreCliente) }}</span>
+              <div class="lista-texto">
+                <strong>{{ v.nombreCliente }}</strong>
+                <small><span class="mono">{{ v.numeroComprobante }}</span> · {{ v.fecha | date: 'd MMM y' }}</small>
+              </div>
+              <span class="badge punto" [class.badge-exito]="v.estado === 'EMITIDA'" [class.badge-peligro]="v.estado === 'ANULADA'">
+                {{ v.estado === 'EMITIDA' ? 'Emitida' : 'Anulada' }}
+              </span>
+              <strong class="num monto" [class.tachado]="v.estado === 'ANULADA'">{{ soles(v.montoTotal) }}</strong>
+            </li>
+          } @empty {
+            <li class="vacio">Aún no hay ventas registradas.</li>
+          }
+        </ul>
+      </article>
+    }
+
+    @if (datos().pagos) {
+      <article class="card" [class.ancho-4]="datos().marcaciones" [class.ancho-12]="!datos().marcaciones" style="--i: 5">
+        <header class="card-cabecera">
+          <div>
+            <h3>Pagos por realizar</h3>
+            <p>Ordenados por fecha programada</p>
+          </div>
+          <a class="btn btn-sm btn-fantasma" routerLink="/pagos">Ver todos</a>
+        </header>
+        <ul class="lista compacta">
+          @for (p of pagosPendientes().slice(0, 5); track p.id; let i = $index) {
+            <li [style.--i]="i">
+              <span class="icono-lista" [class.peligro]="vencido(p.fechaProgramada)">
+                <app-icon [name]="p.tipoBeneficiario === 'TRABAJADOR' ? 'usuario' : 'camion'" [size]="16" />
+              </span>
+              <div class="lista-texto">
+                <strong>{{ p.concepto }}</strong>
+                <small>{{ p.fechaProgramada | date: 'd MMM y' }}</small>
+              </div>
+              <strong class="num monto">{{ soles(p.monto) }}</strong>
+            </li>
+          } @empty {
+            <li class="vacio"><app-icon name="checkCirculo" [size]="18" /> No hay pagos pendientes.</li>
+          }
+        </ul>
+      </article>
+    }
+
+    @if (datos().marcaciones) {
+      <article class="card ancho-4" style="--i: 2">
+        <header class="card-cabecera">
+          <div>
+            <h3>Asistencia de hoy</h3>
+            <p>Últimas marcaciones registradas</p>
+          </div>
+          <a class="btn btn-sm btn-fantasma" routerLink="/asistencia">Ver todo</a>
+        </header>
+        <ul class="lista">
+          @for (m of marcacionesHoy().slice(0, 6); track m.id; let i = $index) {
+            <li [style.--i]="i">
+              <span class="avatar" [style.background]="colorAvatar(nombreTrabajador()(m.trabajadorId))">{{ iniciales(nombreTrabajador()(m.trabajadorId)) }}</span>
+              <div class="lista-texto">
+                <strong>{{ nombreTrabajador()(m.trabajadorId) }}</strong>
+                <small>{{ m.fechaHora | date: 'HH:mm' }} h</small>
+              </div>
+              <span class="badge punto" [class.badge-exito]="m.tipo === 'ENTRADA'" [class.badge-info]="m.tipo === 'SALIDA'">
+                {{ m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}
+              </span>
+            </li>
+          } @empty {
+            <li class="vacio">Todavía no hay marcaciones hoy.</li>
+          }
+        </ul>
+      </article>
+    }
+
+    @if (datos().documentos) {
+      <article class="card ancho-4" style="--i: 3">
+        <header class="card-cabecera">
+          <div>
+            <h3>Documentos por vencer</h3>
+            <p>Vencidos y próximos 30 días</p>
+          </div>
+          <a class="btn btn-sm btn-fantasma" routerLink="/documentos">Gestionar</a>
+        </header>
+        <ul class="lista">
+          @for (doc of documentosPorVencer(); track doc.id; let i = $index) {
+            <li [style.--i]="i">
+              <span class="icono-lista" [class.peligro]="doc.dias < 0" [class.alerta]="doc.dias >= 0">
+                <app-icon name="documento" [size]="16" />
+              </span>
+              <div class="lista-texto">
+                <strong>{{ doc.tipo }}</strong>
+                <small>{{ nombreTrabajador()(doc.trabajadorId) }}</small>
+              </div>
+              <span class="badge" [class.badge-peligro]="doc.dias < 0" [class.badge-alerta]="doc.dias >= 0">
+                {{ doc.dias < 0 ? 'Venció hace ' + doc.diasAtraso + ' d' : doc.dias === 0 ? 'Vence hoy' : 'En ' + doc.dias + ' días' }}
+              </span>
+            </li>
+          } @empty {
+            <li class="vacio"><app-icon name="checkCirculo" [size]="18" /> Todos los documentos están vigentes.</li>
+          }
+        </ul>
+      </article>
+    }
+
+    @if (!datos().ventas && datos().trabajadores && puedeVer('personal.ver') && personalPorArea().length) {
+      <article class="card ancho-4" style="--i: 4">
+        <header class="card-cabecera">
+          <div>
+            <h3>Personal por área</h3>
+            <p>Distribución de la planilla</p>
+          </div>
+        </header>
+        <div class="card-cuerpo centrado">
+          <app-grafico-dona [segmentos]="personalPorArea()" etiquetaTotal="trabajadores" />
+        </div>
+      </article>
+    }
+  </section>
+}

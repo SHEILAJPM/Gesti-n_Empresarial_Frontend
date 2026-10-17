@@ -1,0 +1,131 @@
+<section class="lado-form">
+  <header class="cabecera">
+    <div class="marca">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="9" fill="currentColor" />
+        <path d="M9 23V9l14 14V9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <strong>{{ sistema.nombre }}</strong>
+    </div>
+    <button type="button" class="btn btn-fantasma btn-icono" (click)="tema.alternar($event)"
+      [attr.aria-label]="tema.tema() === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'">
+      <app-icon [name]="tema.tema() === 'light' ? 'luna' : 'sol'" />
+    </button>
+  </header>
+
+  <div class="formulario" [class.temblor]="temblar()" (animationend)="temblar.set(false)">
+    <span class="saludo">Bienvenido de nuevo</span>
+    <h1>Inicia sesión en tu espacio de trabajo</h1>
+    <p class="muted">Ingresa con el usuario que te asignó el administrador del sistema.</p>
+
+    @if (motivo() === 'expirada') {
+      <div class="aviso info">
+        <app-icon name="info" [size]="17" />
+        Tu sesión terminó. Vuelve a ingresar para continuar.
+      </div>
+    }
+    @if (error()) {
+      <div class="aviso error" role="alert">
+        <app-icon name="alerta" [size]="17" />
+        {{ error() }}
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="ingresar()" novalidate>
+      <div class="campo">
+        <label for="usuario">Usuario</label>
+        <div class="control-icono">
+          <app-icon name="usuario" [size]="17" />
+          <input id="usuario" class="control" formControlName="usuario" autocomplete="username" placeholder="Ej. admin" />
+        </div>
+        <app-error-campo [control]="form.controls.usuario" [mensajes]="{ required: 'Ingresa tu usuario.' }" />
+      </div>
+
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <div class="control-icono">
+          <app-icon name="candado" [size]="17" />
+          <input id="clave" class="control" formControlName="clave" autocomplete="current-password"
+            [type]="verClave() ? 'text' : 'password'" placeholder="••••••••" />
+          <button type="button" class="ver-clave" (click)="verClave.set(!verClave())"
+            [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+            <app-icon [name]="verClave() ? 'ojoOculto' : 'ojo'" [size]="17" />
+          </button>
+        </div>
+        <app-error-campo [control]="form.controls.clave" [mensajes]="{ required: 'Ingresa tu contraseña.' }" />
+      </div>
+
+      <button type="submit" class="btn btn-primario btn-bloque ingresar" [disabled]="enviando()">
+        @if (enviando()) {
+          <span class="spinner"></span> Verificando…
+        } @else {
+          Ingresar <app-icon name="flecha" [size]="17" />
+        }
+      </button>
+    </form>
+
+    @if (cuentasDemo.length) {
+      <div class="demo">
+        <span class="demo-titulo">Cuentas de prueba <small>(solo en desarrollo)</small></span>
+        <div class="demo-lista">
+          @for (c of cuentasDemo; track c.usuario) {
+            <button type="button" class="demo-chip" (click)="usarCuenta(c)">
+              <strong>{{ c.usuario }}</strong>
+              <small>{{ c.rol }}</small>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <footer class="pie muted">© {{ anio }} {{ sistema.nombre }} · {{ sistema.descripcion }}</footer>
+</section>
+
+<section class="lado-marca papel-contable" aria-hidden="true">
+  <div class="halo"></div>
+
+  <div class="mensaje">
+    <span class="etiqueta">ERP para tu empresa</span>
+    <h2>Toda tu operación,<br />cuadrada en un solo libro.</h2>
+    <p>Personal, ventas, compras, pagos e impuestos conectados. Lo que registra un área, lo ve la siguiente.</p>
+  </div>
+
+  <div class="escena">
+    <div class="tarjeta t1">
+      <span class="t-titulo"><app-icon name="subida" [size]="15" /> Ventas vs compras</span>
+      <div class="barras">
+        @for (h of [42, 64, 50, 78, 58, 92]; track $index) {
+          <i [style.height.%]="h" [style.animation-delay.ms]="400 + $index * 90"></i>
+        }
+      </div>
+    </div>
+
+    <div class="tarjeta t2">
+      <svg viewBox="0 0 44 44" class="anillo">
+        <circle cx="22" cy="22" r="18" class="pista" />
+        <circle cx="22" cy="22" r="18" class="valor" pathLength="100" />
+      </svg>
+      <div>
+        <span class="t-titulo">IGV del periodo</span>
+        <span class="t-sub">Débito − crédito fiscal</span>
+      </div>
+    </div>
+
+    <div class="tarjeta t3">
+      <span class="check"><app-icon name="check" [size]="15" [grosor]="2.6" /></span>
+      <div>
+        <span class="t-titulo">Asistencia registrada</span>
+        <span class="t-sub">Entrada · Sede principal</span>
+      </div>
+    </div>
+  </div>
+
+  <ul class="modulos">
+    <li><app-icon name="usuarios" [size]="16" /> RR. HH.</li>
+    <li><app-icon name="recibo" [size]="16" /> Ventas</li>
+    <li><app-icon name="carrito" [size]="16" /> Compras</li>
+    <li><app-icon name="billetera" [size]="16" /> Pagos</li>
+    <li><app-icon name="banco" [size]="16" /> SUNAT</li>
+  </ul>
+</section>
