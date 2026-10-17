@@ -1,0 +1,237 @@
+<div class="pila">
+  <app-page-header seccion="Comercial" titulo="Ventas"
+    descripcion="Facturas y boletas emitidas. El IGV se calcula con la tasa vigente configurada en Tributario.">
+    @if (facturacion(); as f) {
+      <span class="chip-sunat" [class.real]="f.proveedor === 'APISUNAT'"
+        [title]="'Emisor: ' + f.emisorRazonSocial + ' · RUC ' + f.emisorRuc">
+        <span class="luz"></span>
+        {{ f.proveedor === 'APISUNAT' ? 'APISUNAT' : 'Simulador SUNAT' }} · {{ f.ambiente | titlecase }}
+      </span>
+    }
+    @if (puedeEditar) {
+      <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nueva venta</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Total emitido" [valor]="totalEmitido()" formato="soles" icono="recibo" [cargando]="cargando()"
+      [detalle]="hayFiltros() ? 'según filtros' : 'todas las ventas'" />
+    <app-stat-card style="--i: 1" titulo="IGV de ventas" [valor]="igvVentas()" formato="soles" icono="porcentaje" tono="alerta"
+      [cargando]="cargando()" detalle="débito fiscal" />
+    <app-stat-card style="--i: 2" titulo="Ticket promedio" [valor]="ticketPromedio()" formato="soles" icono="subida" tono="info"
+      [cargando]="cargando()" detalle="por comprobante emitido" />
+    <app-stat-card style="--i: 3" titulo="Aceptadas por SUNAT" [valor]="aceptadas()" icono="checkCirculo"
+      [tono]="conProblemas() ? 'peligro' : 'exito'" [cargando]="cargando()"
+      [detalle]="conProblemas() ? conProblemas() + ' con observaciones' : anuladas() + ' anuladas'" />
+  </section>
+
+  <article class="card entrada">
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Comprobante, cliente o documento…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+      <select #t class="control" [value]="filtroTipo()" (change)="filtroTipo.set(t.value); tabla.pagina.set(1)" aria-label="Tipo de comprobante">
+        <option value="">Facturas y boletas</option>
+        <option value="FACTURA">Facturas</option>
+        <option value="BOLETA">Boletas</option>
+      </select>
+      <select #e class="control" [value]="filtroEstado()" (change)="filtroEstado.set(e.value); tabla.pagina.set(1)" aria-label="Estado">
+        <option value="">Todos los estados</option>
+        <option value="EMITIDA">Emitidas</option>
+        <option value="ANULADA">Anuladas</option>
+      </select>
+      <input #d type="date" class="control" style="width: auto" [value]="desde()" (change)="desde.set(d.value); tabla.pagina.set(1)" aria-label="Desde" />
+      <input #h type="date" class="control" style="width: auto" [value]="hasta()" (change)="hasta.set(h.value); tabla.pagina.set(1)" aria-label="Hasta" />
+      @if (hayFiltros() || tabla.busqueda()) {
+        <button type="button" class="btn btn-sm btn-fantasma" (click)="limpiarFiltros()"><app-icon name="cerrar" [size]="15" /> Limpiar</button>
+      }
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4, 5]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('numeroComprobante')">Comprobante {{ tabla.flecha('numeroComprobante') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('nombreCliente')">Cliente {{ tabla.flecha('nombreCliente') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('fecha')">Fecha {{ tabla.flecha('fecha') }}</th>
+              <th class="right">Base</th>
+              <th class="right">IGV</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('montoTotal')">Total {{ tabla.flecha('montoTotal') }}</th>
+              <th>Estado</th>
+              <th>SUNAT</th>
+              @if (puedeAnular) { <th class="right">Acciones</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of tabla.visibles(); track v.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td>
+                  <div class="celda-persona">
+                    <span class="badge" [class.badge-brand]="v.tipoComprobante === 'FACTURA'" [class.badge-alerta]="v.tipoComprobante === 'BOLETA'">
+                      {{ v.tipoComprobante === 'FACTURA' ? 'FAC' : 'BOL' }}
+                    </span>
+                    <strong class="mono">{{ v.numeroComprobante }}</strong>
+                  </div>
+                </td>
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(v.nombreCliente)">{{ iniciales(v.nombreCliente) }}</span>
+                    <div><strong>{{ v.nombreCliente }}</strong><small class="mono">{{ v.documentoCliente }}</small></div>
+                  </div>
+                </td>
+                <td class="nowrap">{{ v.fecha | date: 'd MMM y' }}</td>
+                <td class="right num">{{ soles(v.montoSinIgv) }}</td>
+                <td class="right num muted">{{ soles(v.igv) }}</td>
+                <td class="right num"><strong [style.text-decoration]="v.estado === 'ANULADA' ? 'line-through' : null">{{ soles(v.montoTotal) }}</strong></td>
+                <td>
+                  <span class="badge punto" [class.badge-exito]="v.estado === 'EMITIDA'" [class.badge-peligro]="v.estado === 'ANULADA'">
+                    {{ v.estado === 'EMITIDA' ? 'Emitida' : 'Anulada' }}
+                  </span>
+                </td>
+                <td>
+                  @let s = etiquetaSunat(v.sunat.estado);
+                  <button type="button" class="badge punto boton-sunat" [class]="s.clase" (click)="verSunat(v)"
+                    [title]="v.sunat.mensaje ?? 'Ver comprobante electrónico'">
+                    @if (v.sunat.estado === 'PENDIENTE') { <span class="spinner mini"></span> }
+                    {{ s.texto }}
+                  </button>
+                </td>
+                @if (puedeAnular) {
+                  <td>
+                    <div class="acciones">
+                      @if (v.estado === 'EMITIDA') {
+                        <button type="button" class="btn btn-fantasma btn-sm" (click)="anular(v)"><app-icon name="anular" [size]="15" /> Anular</button>
+                      }
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="recibo" [titulo]="ventas().length ? 'Sin coincidencias' : 'Aún no hay ventas'"
+        [texto]="ventas().length ? 'Ajusta los filtros para ver más resultados.' : 'Emite la primera factura o boleta.'">
+        @if (ventas().length) {
+          <button type="button" class="btn" (click)="limpiarFiltros()">Limpiar filtros</button>
+        } @else if (puedeEditar) {
+          <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nueva venta</button>
+        }
+      </app-vacio>
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="!!detalleSunat()" (cerrar)="detalleSunat.set(null)" etiqueta="Facturación electrónica"
+  [titulo]="detalleSunat()?.numeroComprobante ?? ''"
+  [descripcion]="(detalleSunat()?.tipoComprobante === 'FACTURA' ? 'Factura' : 'Boleta') + ' a ' + (detalleSunat()?.nombreCliente ?? '')">
+  @if (detalleSunat(); as v) {
+    @let s = etiquetaSunat(v.sunat.estado);
+    <div class="pila">
+      <div class="estado-sunat" [class]="s.clase">
+        <span class="estado-icono">
+          <app-icon [name]="v.sunat.estado === 'ACEPTADO' ? 'checkCirculo' : v.sunat.estado === 'PENDIENTE' ? 'reloj' : v.sunat.estado === 'NO_ENVIADO' ? 'info' : 'alerta'" [size]="22" />
+        </span>
+        <div>
+          <strong>{{ s.texto }}</strong>
+          <p>{{ v.sunat.mensaje || 'Este comprobante todavía no se envió.' }}</p>
+        </div>
+      </div>
+
+      <dl class="datos-sunat">
+        <div><dt>Proveedor</dt><dd>{{ v.sunat.proveedor === 'APISUNAT' ? 'APISUNAT' : v.sunat.proveedor === 'SIMULADOR' ? 'Simulador local' : '—' }}</dd></div>
+        <div><dt>Archivo</dt><dd class="mono">{{ v.sunat.fileName || '—' }}</dd></div>
+        <div><dt>Enviado</dt><dd>{{ v.sunat.fechaEnvio ? (v.sunat.fechaEnvio | date: 'd MMM y, HH:mm:ss') : '—' }}</dd></div>
+        <div><dt>ID del documento</dt><dd class="mono id-doc">{{ v.sunat.documentId || '—' }}</dd></div>
+        <div><dt>Total</dt><dd class="num">{{ soles(v.montoTotal) }}</dd></div>
+      </dl>
+
+      @if (v.sunat.pdfUrl || v.sunat.xmlUrl || v.sunat.cdrUrl) {
+        <div class="descargas">
+          @if (v.sunat.pdfUrl) { <a class="btn btn-sm" [href]="v.sunat.pdfUrl" target="_blank" rel="noopener"><app-icon name="documento" [size]="15" /> PDF</a> }
+          @if (v.sunat.xmlUrl) { <a class="btn btn-sm" [href]="v.sunat.xmlUrl" target="_blank" rel="noopener"><app-icon name="documento" [size]="15" /> XML</a> }
+          @if (v.sunat.cdrUrl) { <a class="btn btn-sm" [href]="v.sunat.cdrUrl" target="_blank" rel="noopener"><app-icon name="checkCirculo" [size]="15" /> CDR</a> }
+        </div>
+      } @else if (v.sunat.proveedor === 'SIMULADOR' && v.sunat.estado === 'ACEPTADO') {
+        <p class="ayuda">El simulador no genera PDF, XML ni CDR. Con APISUNAT configurado aparecen aquí para descargar.</p>
+      }
+    </div>
+  }
+  <ng-container ngProjectAs="[pie]">
+    @if (detalleSunat(); as v) {
+      @if (v.sunat.documentId) {
+        <button type="button" class="btn" [disabled]="procesandoSunat()" (click)="consultarSunat(v)"><app-icon name="recargar" [size]="16" /> Consultar estado</button>
+      }
+      @if (puedeEditar && v.estado === 'EMITIDA' && ['NO_ENVIADO', 'ERROR', 'RECHAZADO', 'EXCEPCION'].includes(v.sunat.estado)) {
+        <button type="button" class="btn btn-primario" [disabled]="procesandoSunat()" (click)="reenviarSunat(v)">
+          @if (procesandoSunat()) { <span class="spinner"></span> } @else { <app-icon name="flecha" [size]="16" /> }
+          {{ v.sunat.estado === 'NO_ENVIADO' ? 'Enviar a SUNAT' : 'Reenviar' }}
+        </button>
+      }
+    }
+  </ng-container>
+</app-panel>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Comercial" titulo="Nueva venta"
+  descripcion="El tipo de comprobante depende del cliente: RUC → factura, DNI → boleta.">
+  <form id="form-venta" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo completo">
+      <label for="v-cliente">Cliente</label>
+      <select id="v-cliente" class="control" formControlName="documentoCliente" (change)="alElegirCliente()">
+        <option value="">Selecciona un cliente…</option>
+        @for (c of clientes(); track c.id) {
+          <option [value]="c.documento">{{ c.nombre }} · {{ c.tipoDocumento }} {{ c.documento }}</option>
+        }
+      </select>
+      <span class="ayuda">¿No está en la lista? <a routerLink="/clientes" [queryParams]="{ nuevo: 1 }">Registrar cliente</a></span>
+      <app-error-campo [control]="form.controls.documentoCliente" />
+    </div>
+
+    @if (clienteElegido()) {
+      <div class="campo completo">
+        <label>Comprobante</label>
+        <span class="badge" style="height: 30px; width: fit-content" [class.badge-brand]="tipoComprobante() === 'FACTURA'"
+          [class.badge-alerta]="tipoComprobante() === 'BOLETA'">
+          <app-icon name="recibo" [size]="15" /> {{ tipoComprobante() === 'FACTURA' ? 'Factura electrónica' : 'Boleta de venta' }}
+        </span>
+      </div>
+    }
+
+    <div class="campo">
+      <label for="v-numero">Número</label>
+      <input id="v-numero" class="control mono" formControlName="numeroComprobante" placeholder="F001-123" />
+      <app-error-campo [control]="form.controls.numeroComprobante" [mensajes]="{ pattern: 'Formato F001-123 o B001-123.' }" />
+    </div>
+    <div class="campo">
+      <label for="v-fecha">Fecha</label>
+      <input id="v-fecha" type="date" class="control" formControlName="fecha" [max]="hoy" />
+      <app-error-campo [control]="form.controls.fecha" />
+    </div>
+    <div class="campo completo">
+      <label for="v-monto">Monto sin IGV (S/)</label>
+      <input id="v-monto" type="number" step="0.01" min="0" class="control num" formControlName="montoSinIgv" />
+      <app-error-campo [control]="form.controls.montoSinIgv" [mensajes]="{ min: 'El monto debe ser mayor a cero.' }" />
+    </div>
+
+    <div class="completo desglose">
+      <div><span>Base imponible</span><span class="num">{{ soles(vistaPrevia().base) }}</span></div>
+      <div><span>IGV (18 %)</span><span class="num">{{ soles(vistaPrevia().igv) }}</span></div>
+      <div class="total"><span>Total a cobrar</span><span class="num">{{ soles(vistaPrevia().total) }}</span></div>
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-venta" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Emitiendo… } @else { <app-icon name="check" [size]="17" /> Emitir comprobante }
+    </button>
+  </ng-container>
+</app-panel>

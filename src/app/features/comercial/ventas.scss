@@ -1,0 +1,81 @@
+// Indicador del proveedor de facturación activo
+.chip-sunat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: help;
+
+  .luz {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--accent-soft);
+    animation: latido 2s infinite;
+  }
+  &.real .luz { background: var(--success); }
+}
+
+@keyframes latido {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, var(--accent-soft)); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+}
+
+.boton-sunat {
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-spring), filter 0.2s ease;
+  &:hover { transform: translateY(-1px); filter: brightness(0.96); }
+}
+
+.spinner.mini { width: 10px; height: 10px; border-width: 1.5px; }
+
+// Panel del comprobante electrónico
+.estado-sunat {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  animation: escalar-entrada 0.35s var(--ease-out);
+
+  strong { display: block; font-family: var(--font-display); font-size: 17px; }
+  p { font-size: 13.5px; margin-top: 2px; color: var(--ink-2); }
+
+  &.badge-exito { background: var(--success-soft); color: var(--success); }
+  &.badge-alerta { background: var(--accent-soft); color: var(--accent); }
+  &.badge-peligro { background: var(--danger-soft); color: var(--danger); }
+}
+
+.estado-icono {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.datos-sunat {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  div { display: flex; flex-direction: column; gap: 2px; }
+  dt { font-size: 12px; color: var(--ink-3); }
+  dd { margin: 0; font-weight: 550; }
+  .id-doc { font-size: 12px; overflow-wrap: anywhere; }
+}
+
+.descargas { display: flex; gap: 8px; flex-wrap: wrap; }

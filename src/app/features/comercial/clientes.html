@@ -1,0 +1,109 @@
+<div class="pila">
+  <app-page-header seccion="Comercial" titulo="Clientes" descripcion="Personas (DNI) y empresas (RUC) a las que se les vende.">
+    @if (puedeEditar) {
+      <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nuevo cliente</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Clientes" [valor]="clientes().length" icono="cliente" [cargando]="cargando()" />
+    <app-stat-card style="--i: 1" titulo="Empresas (RUC)" [valor]="empresas()" icono="edificio" tono="info" [cargando]="cargando()"
+      [detalle]="clientes().length - empresas() + ' personas con DNI'" />
+    <app-stat-card style="--i: 2" titulo="Mejor cliente" [valor]="mejorCliente()?.facturado ?? 0" formato="soles" icono="subida"
+      tono="exito" [cargando]="cargando()" [detalle]="mejorCliente()?.nombre ?? '—'" />
+  </section>
+
+  <article class="card entrada">
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar por nombre o documento…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+      <select #t class="control" [value]="filtroTipo()" (change)="filtroTipo.set(t.value); tabla.pagina.set(1)" aria-label="Tipo de documento">
+        <option value="">DNI y RUC</option>
+        <option value="DNI">Personas (DNI)</option>
+        <option value="RUC">Empresas (RUC)</option>
+      </select>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('nombre')">Cliente {{ tabla.flecha('nombre') }}</th>
+              <th>Documento</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('compras')">Ventas {{ tabla.flecha('compras') }}</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('facturado')">Facturado {{ tabla.flecha('facturado') }}</th>
+              @if (puedeEditar) { <th class="right">Acciones</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of tabla.visibles(); track c.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(c.nombre)">{{ iniciales(c.nombre) }}</span>
+                    <strong>{{ c.nombre }}</strong>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge" [class.badge-info]="c.tipoDocumento === 'RUC'">{{ c.tipoDocumento }}</span>
+                  <span class="mono" style="margin-left: 8px">{{ c.documento }}</span>
+                </td>
+                <td class="right num">{{ c.compras }}</td>
+                <td class="right num"><strong>{{ soles(c.facturado) }}</strong></td>
+                @if (puedeEditar) {
+                  <td>
+                    <div class="acciones">
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="abrir(c)" aria-label="Editar"><app-icon name="editar" [size]="16" /></button>
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="eliminar(c)" aria-label="Eliminar"><app-icon name="eliminar" [size]="16" /></button>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="cliente" [titulo]="clientes().length ? 'Sin coincidencias' : 'Aún no hay clientes'"
+        [texto]="clientes().length ? 'Prueba con otro término.' : 'Registra un cliente para poder emitirle comprobantes.'" />
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Comercial"
+  [titulo]="editando() ? 'Editar cliente' : 'Nuevo cliente'"
+  descripcion="Con RUC se le emiten facturas; con DNI, boletas.">
+  <form id="form-cliente" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo completo">
+      <label for="c-doc">DNI o RUC</label>
+      <div class="control-icono">
+        <app-icon name="documento" [size]="17" />
+        <input id="c-doc" class="control mono" formControlName="documento" inputmode="numeric" maxlength="11" placeholder="8 u 11 dígitos" />
+      </div>
+      @if (tipoDetectado(); as tipo) {
+        <span class="ayuda text-success">Detectado: {{ tipo === 'RUC' ? 'RUC — se emitirán facturas' : 'DNI — se emitirán boletas' }}</span>
+      }
+      <app-error-campo [control]="form.controls.documento" [mensajes]="{ pattern: 'Ingresa un DNI de 8 dígitos o un RUC de 11.' }" />
+    </div>
+    <div class="campo completo">
+      <label for="c-nombre">{{ tipoDetectado() === 'RUC' ? 'Razón social' : 'Nombre completo' }}</label>
+      <input id="c-nombre" class="control" formControlName="nombre" [placeholder]="tipoDetectado() === 'RUC' ? 'Ej. Comercial Lima S.A.C.' : 'Ej. Carlos Mendoza'" />
+      <app-error-campo [control]="form.controls.nombre" />
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-cliente" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> Guardar }
+    </button>
+  </ng-container>
+</app-panel>
