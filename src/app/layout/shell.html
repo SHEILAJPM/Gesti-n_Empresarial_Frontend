@@ -1,0 +1,136 @@
+<aside class="lateral">
+  <a class="marca" routerLink="/panel" [attr.aria-label]="sistema.nombre">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 32 32">
+        <rect width="32" height="32" rx="9" fill="currentColor" />
+        <path d="M9 23V9l14 14V9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </span>
+    <span class="marca-texto">
+      <strong>{{ sistema.nombre }}</strong>
+      <small>{{ sistema.descripcion }}</small>
+    </span>
+  </a>
+
+  <nav class="navegacion" aria-label="Menú principal">
+    @for (grupo of grupos(); track grupo.titulo; let gi = $index) {
+      <div class="grupo" [style.--i]="gi">
+        <span class="grupo-titulo">{{ grupo.titulo }}</span>
+        @for (item of grupo.items; track item.ruta) {
+          <a class="item" [routerLink]="item.ruta" routerLinkActive="activo" [attr.data-tooltip]="item.titulo">
+            <app-icon [name]="item.icono" [size]="19" />
+            <span class="item-texto">{{ item.titulo }}</span>
+          </a>
+        }
+      </div>
+    }
+  </nav>
+
+  <button type="button" class="colapsar" (click)="alternarColapsado()"
+    [attr.aria-label]="colapsado() ? 'Expandir menú' : 'Contraer menú'">
+    <app-icon name="izquierda" [size]="16" />
+  </button>
+
+  <div class="usuario-lateral">
+    <span class="avatar" [style.background]="colorUsuario()">{{ iniciales() }}</span>
+    <span class="usuario-texto">
+      <strong>{{ usuario() }}</strong>
+      <small>{{ nombreRol() }}</small>
+    </span>
+  </div>
+</aside>
+
+<div class="velo-movil" (click)="menuMovil.set(false)"></div>
+
+<div class="principal">
+  <header class="superior">
+    <button type="button" class="btn btn-fantasma btn-icono solo-movil" (click)="menuMovil.set(true)" aria-label="Abrir menú">
+      <app-icon name="menu" />
+    </button>
+
+    <div class="migas">
+      <span>{{ paginaActual().grupo }}</span>
+      @if (paginaActual().titulo) {
+        <app-icon name="derecha" [size]="14" />
+        <strong>{{ paginaActual().titulo }}</strong>
+      }
+    </div>
+
+    <button type="button" class="buscador" (click)="abrirPaleta()">
+      <app-icon name="buscar" [size]="16" />
+      <span>Ir a un módulo…</span>
+      <kbd>Ctrl</kbd><kbd>K</kbd>
+    </button>
+
+    <button type="button" class="btn btn-fantasma btn-icono tema" (click)="tema.alternar($event)"
+      [attr.aria-label]="tema.tema() === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'">
+      @if (tema.tema() === 'light') {
+        <app-icon name="luna" class="giro" />
+      } @else {
+        <app-icon name="sol" class="giro" />
+      }
+    </button>
+
+    <div class="menu-usuario">
+      <button type="button" class="perfil" (click)="menuUsuario.set(!menuUsuario())" [attr.aria-expanded]="menuUsuario()">
+        <span class="avatar" [style.background]="colorUsuario()">{{ iniciales() }}</span>
+        <span class="perfil-texto">
+          <strong>{{ usuario() }}</strong>
+          <small>{{ nombreRol() }}</small>
+        </span>
+        <app-icon name="abajo" [size]="15" />
+      </button>
+
+      @if (menuUsuario()) {
+        <div class="velo-transparente" (click)="menuUsuario.set(false)"></div>
+        <div class="desplegable card" animate.enter="anim-pop-in" animate.leave="anim-pop-out">
+          <div class="desplegable-cabecera">
+            <span class="avatar" [style.background]="colorUsuario()">{{ iniciales() }}</span>
+            <div>
+              <strong>{{ usuario() }}</strong>
+              <span class="badge badge-brand">{{ nombreRol() }}</span>
+            </div>
+          </div>
+          <button type="button" class="opcion" (click)="tema.alternar($event)">
+            <app-icon [name]="tema.tema() === 'light' ? 'luna' : 'sol'" [size]="17" />
+            {{ tema.tema() === 'light' ? 'Modo oscuro' : 'Modo claro' }}
+          </button>
+          <button type="button" class="opcion peligro" (click)="auth.cerrarSesion()">
+            <app-icon name="salir" [size]="17" /> Cerrar sesión
+          </button>
+        </div>
+      }
+    </div>
+  </header>
+
+  <main class="contenido">
+    <router-outlet />
+  </main>
+</div>
+
+@if (paletaAbierta()) {
+  <div class="paleta-velo" animate.enter="anim-fade-in" animate.leave="anim-fade-out" (click)="paletaAbierta.set(false)"></div>
+  <div class="paleta card" role="dialog" aria-modal="true" aria-label="Ir a un módulo"
+    animate.enter="anim-pop-in" animate.leave="anim-pop-out">
+    <div class="paleta-busqueda">
+      <app-icon name="buscar" [size]="18" />
+      <input #campo autofocus placeholder="Escribe un módulo: ventas, pagos, asistencia…" [value]="consulta()"
+        (input)="buscarEnPaleta(campo.value)" (keydown)="teclaPaleta($event)" />
+      <kbd>Esc</kbd>
+    </div>
+    <ul class="paleta-lista">
+      @for (r of resultados(); track r.ruta; let i = $index) {
+        <li>
+          <button type="button" [class.seleccionado]="i === seleccion()" (mouseenter)="seleccion.set(i)" (click)="ir(r.ruta)">
+            <span class="paleta-icono"><app-icon [name]="r.icono" [size]="17" /></span>
+            <span>{{ r.titulo }}</span>
+            <small>{{ r.grupo }}</small>
+            <app-icon name="flecha" [size]="15" class="paleta-ir" />
+          </button>
+        </li>
+      } @empty {
+        <li class="paleta-vacia">No hay módulos que coincidan con «{{ consulta() }}»</li>
+      }
+    </ul>
+  </div>
+}
