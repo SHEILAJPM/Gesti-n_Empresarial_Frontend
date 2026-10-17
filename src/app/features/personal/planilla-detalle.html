@@ -1,0 +1,175 @@
+<a class="volver" routerLink="/planillas"><app-icon name="izquierda" [size]="16" /> Planillas</a>
+
+@if (cargando()) {
+  <div class="pila">
+    <div class="skeleton" style="height: 150px; border-radius: 18px"></div>
+    <div class="skeleton" style="height: 340px; border-radius: 18px"></div>
+  </div>
+} @else if (planilla(); as p) {
+  <div class="pila">
+    <section class="cabecera card papel-contable">
+      <div>
+        <span class="seccion">Planilla de remuneraciones</span>
+        <h1>{{ nombrePeriodo(p) }}</h1>
+        <p class="muted">
+          Generada por <strong>{{ p.generadaPor }}</strong> el {{ p.fechaGeneracion | date: 'd MMM y, HH:mm' }}
+          @if (p.aprobadaPor) {
+            · Aprobada por <strong>{{ p.aprobadaPor }}</strong> el {{ p.fechaAprobacion | date: 'd MMM y, HH:mm' }}
+          }
+        </p>
+        <div class="estado">
+          @if (p.estado === 'BORRADOR') {
+            <span class="badge punto badge-alerta">Borrador · pendiente de aprobación por Contabilidad</span>
+          } @else if (p.pagosRealizados === p.cantidadTrabajadores) {
+            <span class="badge punto badge-exito">Pagada el {{ p.fechaPago | date: 'd MMM y' }}</span>
+          } @else {
+            <span class="badge punto badge-info">Aprobada · {{ p.pagosRealizados }} de {{ p.cantidadTrabajadores }} pagos realizados</span>
+          }
+        </div>
+      </div>
+      <div class="acciones-cabecera">
+        @if (p.estado === 'BORRADOR') {
+          @if (puedeAprobar) {
+            <button type="button" class="btn btn-primario" [disabled]="procesando()" (click)="abrirAprobacion()"><app-icon name="checkCirculo" [size]="17" /> Aprobar planilla</button>
+          }
+          @if (puedeGenerar) {
+            <button type="button" class="btn" [disabled]="procesando()" (click)="regenerar()"><app-icon name="recargar" [size]="16" /> Recalcular</button>
+            <button type="button" class="btn btn-fantasma btn-icono" (click)="eliminar()" aria-label="Eliminar borrador"><app-icon name="eliminar" [size]="16" /></button>
+          }
+        } @else if (puedeAprobar) {
+          <a class="btn" routerLink="/pagos"><app-icon name="billetera" [size]="16" /> Ver pagos</a>
+        }
+      </div>
+    </section>
+
+    <section class="totales escalonado">
+      <div style="--i: 0"><span>Remuneraciones</span><strong class="num" [appContador]="p.totalBruto" formato="soles"></strong></div>
+      <div style="--i: 1"><span>Descuentos (ONP / AFP)</span><strong class="num text-danger" [appContador]="p.totalDescuentos" formato="soles"></strong></div>
+      <div style="--i: 2" class="destacado"><span>Neto a pagar</span><strong class="num" [appContador]="p.totalNeto" formato="soles"></strong></div>
+      <div style="--i: 3"><span>EsSalud (9 %, empresa)</span><strong class="num" [appContador]="p.totalEssalud" formato="soles"></strong></div>
+      <div style="--i: 4"><span>Costo total empresa</span><strong class="num" [appContador]="costoEmpresa()" formato="soles"></strong></div>
+    </section>
+
+    @if (p.omitidos.length) {
+      <div class="aviso entrada">
+        <app-icon name="alerta" [size]="18" />
+        <div>
+          <strong>{{ p.omitidos.length }} trabajador(es) quedaron fuera por ficha incompleta</strong>
+          <span>{{ p.omitidos.join(' · ') }}</span>
+        </div>
+        @if (puedeGenerar) { <a class="btn btn-sm" routerLink="/personal">Completar fichas</a> }
+      </div>
+    }
+
+    <article class="card entrada">
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Trabajador</th>
+              <th class="right">Días</th>
+              <th class="right">Remuneración</th>
+              <th>Pensión</th>
+              <th class="right">Descuento</th>
+              <th class="right">Neto</th>
+              <th class="right">EsSalud</th>
+              @if (p.estado === 'APROBADA') { <th>Pago</th> }
+              <th class="right">Boleta</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of p.detalles; track d.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(d.nombres)">{{ iniciales(d.nombres) }}</span>
+                    <div><strong>{{ d.nombres }}</strong><small>{{ d.cargo }} · {{ d.area }}</small></div>
+                  </div>
+                </td>
+                <td class="right num">
+                  {{ d.diasLaborados }}
+                  @if (d.diasLaborados < 30) { <small class="muted" style="display: block">prorrateado</small> }
+                </td>
+                <td class="right num">{{ soles(d.remuneracionBruta) }}</td>
+                <td>
+                  <span class="badge" [class.badge-info]="d.sistemaPension === 'AFP'">{{ d.sistemaPension }}{{ d.afp ? ' ' + d.afp : '' }}</span>
+                  <small class="muted num" style="display: block">{{ porcentaje(d.tasaPension) }}</small>
+                </td>
+                <td class="right num nowrap text-danger">− {{ soles(d.descuentoPension) }}</td>
+                <td class="right num nowrap"><strong>{{ soles(d.neto) }}</strong></td>
+                <td class="right num muted">{{ soles(d.essalud) }}</td>
+                @if (p.estado === 'APROBADA') {
+                  <td>
+                    <span class="badge punto" [class.badge-exito]="d.estadoPago === 'PAGADO'" [class.badge-alerta]="d.estadoPago !== 'PAGADO'">
+                      {{ d.estadoPago === 'PAGADO' ? 'Pagado' : 'Pendiente' }}
+                    </span>
+                  </td>
+                }
+                <td class="right">
+                  <button type="button" class="btn btn-sm" (click)="boleta.set(d)"><app-icon name="documento" [size]="15" /> Ver</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td><strong>Total · {{ p.cantidadTrabajadores }} trabajadores</strong></td>
+              <td></td>
+              <td class="right num"><strong>{{ soles(p.totalBruto) }}</strong></td>
+              <td></td>
+              <td class="right num nowrap text-danger"><strong>− {{ soles(p.totalDescuentos) }}</strong></td>
+              <td class="right num"><strong>{{ soles(p.totalNeto) }}</strong></td>
+              <td class="right num"><strong>{{ soles(p.totalEssalud) }}</strong></td>
+              @if (p.estado === 'APROBADA') { <td></td> }
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </article>
+  </div>
+
+  <app-panel [abierto]="aprobarAbierto()" (cerrar)="aprobarAbierto.set(false)" etiqueta="Contabilidad" titulo="Aprobar planilla"
+    [descripcion]="'Se programará un pago por trabajador en el módulo de Pagos. La planilla de ' + nombrePeriodo(p) + ' ya no podrá modificarse.'">
+    <div class="pila">
+      <div class="desglose">
+        <div><span>Trabajadores</span><span class="num">{{ p.cantidadTrabajadores }}</span></div>
+        <div><span>Remuneraciones</span><span class="num">{{ soles(p.totalBruto) }}</span></div>
+        <div><span>Descuentos</span><span class="num">− {{ soles(p.totalDescuentos) }}</span></div>
+        <div class="total"><span>Neto a pagar</span><span class="num">{{ soles(p.totalNeto) }}</span></div>
+      </div>
+      <div class="campo">
+        <label for="ap-fecha">Fecha de pago programada</label>
+        <input id="ap-fecha" #f type="date" class="control" [value]="fechaPago()" (change)="fechaPago.set(f.value)" />
+        <span class="ayuda">Por defecto, el último día del mes.</span>
+      </div>
+    </div>
+    <ng-container ngProjectAs="[pie]">
+      <button type="button" class="btn" (click)="aprobarAbierto.set(false)">Cancelar</button>
+      <button type="button" class="btn btn-primario" [disabled]="procesando() || !fechaPago()" (click)="aprobar()">
+        @if (procesando()) { <span class="spinner"></span> Aprobando… } @else { <app-icon name="checkCirculo" [size]="17" /> Aprobar y programar pagos }
+      </button>
+    </ng-container>
+  </app-panel>
+
+  @if (boleta(); as d) {
+    <div class="boleta-velo" animate.enter="anim-fade-in" animate.leave="anim-fade-out" (click)="boleta.set(null)"></div>
+    <div class="boleta-contenedor" role="dialog" aria-modal="true" aria-label="Boleta de pago" animate.enter="anim-pop-in" animate.leave="anim-pop-out">
+      <div class="boleta-barra">
+        <span>Boleta de pago · {{ d.nombres }}</span>
+        <div>
+          <button type="button" class="btn btn-sm btn-primario" (click)="imprimir()"><app-icon name="documento" [size]="15" /> Imprimir o guardar PDF</button>
+          <button type="button" class="btn btn-sm btn-fantasma btn-icono" (click)="boleta.set(null)" aria-label="Cerrar"><app-icon name="cerrar" [size]="16" /></button>
+        </div>
+      </div>
+
+      <app-boleta-pago [detalle]="d" [periodo]="nombrePeriodo(p)" />
+    </div>
+  }
+} @else {
+  <article class="card">
+    <app-vacio icono="calculadora" titulo="Planilla no encontrada" texto="Puede que el borrador haya sido eliminado o recalculado.">
+      <a class="btn" routerLink="/planillas">Volver a planillas</a>
+    </app-vacio>
+  </article>
+}

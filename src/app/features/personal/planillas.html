@@ -1,0 +1,113 @@
+<div class="pila">
+  <app-page-header seccion="Recursos humanos" titulo="Planillas"
+    descripcion="RRHH genera la planilla del mes; Contabilidad la revisa y aprueba, y con eso se programan los pagos de sueldos.">
+    @if (puedeGenerar) {
+      <button type="button" class="btn btn-primario" (click)="panelAbierto.set(true)"><app-icon name="calculadora" [size]="17" /> Generar planilla</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" [titulo]="ultima() ? 'Neto · ' + nombrePeriodo(ultima()!) : 'Última planilla'" [valor]="ultima()?.totalNeto ?? 0"
+      formato="soles" icono="billetera" [cargando]="cargando()" [detalle]="ultima() ? ultima()!.cantidadTrabajadores + ' trabajadores' : 'Aún no hay planillas'" />
+    <app-stat-card style="--i: 1" titulo="Por aprobar" [valor]="porAprobar()" icono="alerta" [tono]="porAprobar() ? 'alerta' : 'exito'"
+      [cargando]="cargando()" detalle="planillas en borrador" />
+    <app-stat-card style="--i: 2" titulo="Costo laboral del año" [valor]="costoAnual()" formato="soles" icono="subida" tono="info"
+      [cargando]="cargando()" detalle="remuneraciones + EsSalud aprobadas" />
+  </section>
+
+  <article class="card entrada">
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 52px"></div> }
+      </div>
+    } @else if (planillas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Periodo</th>
+              <th>Estado</th>
+              <th class="right">Trabajadores</th>
+              <th class="right">Remuneraciones</th>
+              <th class="right">Descuentos</th>
+              <th class="right">Neto a pagar</th>
+              <th class="right">EsSalud</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of planillas(); track p.id; let i = $index) {
+              <tr [style.--i]="i" class="fila-clic" (click)="abrir(p)">
+                <td>
+                  <a [routerLink]="['/planillas', p.id]" (click)="$event.stopPropagation()"><strong>{{ nombrePeriodo(p) }}</strong></a>
+                  <small class="muted" style="display: block">Generada por {{ p.generadaPor }} · {{ p.fechaGeneracion | date: 'd MMM, HH:mm' }}</small>
+                </td>
+                <td>
+                  @if (p.estado === 'BORRADOR') {
+                    <span class="badge punto badge-alerta">Por aprobar</span>
+                  } @else if (p.pagosRealizados === p.cantidadTrabajadores) {
+                    <span class="badge punto badge-exito">Pagada</span>
+                  } @else {
+                    <span class="badge punto badge-info">Aprobada · {{ p.pagosRealizados }}/{{ p.cantidadTrabajadores }} pagos</span>
+                  }
+                </td>
+                <td class="right num">{{ p.cantidadTrabajadores }}</td>
+                <td class="right num">{{ soles(p.totalBruto) }}</td>
+                <td class="right num muted">− {{ soles(p.totalDescuentos) }}</td>
+                <td class="right num"><strong>{{ soles(p.totalNeto) }}</strong></td>
+                <td class="right num muted">{{ soles(p.totalEssalud) }}</td>
+                <td class="right"><app-icon name="derecha" [size]="16" class="muted" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <app-vacio icono="calculadora" titulo="Aún no hay planillas"
+        texto="Genera la planilla del mes: se calcula con el sueldo, los días laborados y el sistema de pensiones de cada trabajador.">
+        @if (puedeGenerar) {
+          <button type="button" class="btn btn-primario" (click)="panelAbierto.set(true)"><app-icon name="calculadora" [size]="17" /> Generar planilla</button>
+        }
+      </app-vacio>
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Recursos humanos" titulo="Generar planilla"
+  descripcion="Incluye a los trabajadores que estuvieron en planilla ese mes, con su ficha completa.">
+  <div class="form-grid">
+    <div class="campo">
+      <label for="pl-mes">Mes</label>
+      <select id="pl-mes" #m class="control" [value]="mes()" (change)="mes.set(+m.value)">
+        @for (nombre of meses; track nombre; let i = $index) { <option [value]="i + 1">{{ nombre }}</option> }
+      </select>
+    </div>
+    <div class="campo">
+      <label for="pl-anio">Año</label>
+      <select id="pl-anio" #a class="control" [value]="anio()" (change)="anio.set(+a.value)">
+        @for (x of anios; track x) { <option [value]="x">{{ x }}</option> }
+      </select>
+    </div>
+    <div class="completo desglose">
+      <div><span>Sueldo</span><span>proporcional a los días laborados (mes de 30 días)</span></div>
+      <div><span>ONP</span><span class="num">13 %</span></div>
+      <div><span>AFP</span><span>10 % aporte + 1.37 % seguro + comisión de su AFP</span></div>
+      <div><span>EsSalud (empleador)</span><span class="num">9 %</span></div>
+    </div>
+    @if (esFuturo()) {
+      <p class="completo error-campo">No se puede generar la planilla de un mes que aún no empieza.</p>
+    } @else if (existente(); as e) {
+      <p class="completo ayuda" [class.error-campo]="e.estado === 'APROBADA'">
+        {{ e.estado === 'APROBADA'
+          ? 'La planilla de este mes ya fue aprobada y no se puede regenerar.'
+          : 'Ya existe un borrador de este mes: se reemplazará con un nuevo cálculo.' }}
+      </p>
+    }
+  </div>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="button" class="btn btn-primario" [disabled]="generando() || esFuturo() || existente()?.estado === 'APROBADA'" (click)="generar()">
+      @if (generando()) { <span class="spinner"></span> Calculando… } @else { <app-icon name="calculadora" [size]="17" /> {{ existente() ? 'Regenerar' : 'Generar' }} }
+    </button>
+  </ng-container>
+</app-panel>
