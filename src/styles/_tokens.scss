@@ -1,0 +1,93 @@
+// Tokens de diseño. Modo claro por defecto; [data-theme="dark"] los redefine.
+:root {
+  --font-display: 'Schibsted Grotesk', 'Segoe UI', sans-serif;
+  --font-body: 'Figtree', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f8fafb;
+  --surface-3: #eef2f5;
+  --border: #e2e8ee;
+  --border-strong: #cbd4de;
+
+  --ink: #0e1a2b;
+  --ink-2: #45536a;
+  --ink-3: #7b889b;
+
+  --brand: #0b6e69;
+  --brand-strong: #07524e;
+  --brand-soft: #e2f1ef;
+  --brand-ink: #ffffff;
+  --brand-glow: rgba(11, 110, 105, 0.22);
+
+  --accent: #c98219;
+  --accent-soft: #fbf0dc;
+  --success: #15803d;
+  --success-soft: #e5f4ea;
+  --danger: #c0392b;
+  --danger-soft: #fbe9e6;
+  --info: #2457c5;
+  --info-soft: #e7eefc;
+
+  --chart-1: var(--brand);
+  --chart-2: #94a3b8;
+  --chart-3: var(--accent);
+  --grid-line: rgba(14, 26, 43, 0.045);
+
+  --shadow-xs: 0 1px 2px rgba(14, 26, 43, 0.06);
+  --shadow-sm: 0 1px 2px rgba(14, 26, 43, 0.05), 0 2px 8px rgba(14, 26, 43, 0.05);
+  --shadow-md: 0 4px 12px rgba(14, 26, 43, 0.07), 0 12px 32px rgba(14, 26, 43, 0.07);
+  --shadow-lg: 0 24px 64px rgba(14, 26, 43, 0.18);
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --sidebar-w: 268px;
+  --sidebar-w-min: 78px;
+  --topbar-h: 68px;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0a1019;
+  --surface: #101925;
+  --surface-2: #142030;
+  --surface-3: #1a283a;
+  --border: #1f2e42;
+  --border-strong: #2d4058;
+
+  --ink: #e8eef5;
+  --ink-2: #a5b3c5;
+  --ink-3: #6e7f95;
+
+  --brand: #2bb3a8;
+  --brand-strong: #5fd4c9;
+  --brand-soft: rgba(43, 179, 168, 0.14);
+  --brand-ink: #03201e;
+  --brand-glow: rgba(43, 179, 168, 0.28);
+
+  --accent: #efb158;
+  --accent-soft: rgba(239, 177, 88, 0.14);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.13);
+  --info: #7aa7ff;
+  --info-soft: rgba(122, 167, 255, 0.13);
+
+  --chart-2: #4c6280;
+  --grid-line: rgba(232, 238, 245, 0.04);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
+
+  color-scheme: dark;
+}

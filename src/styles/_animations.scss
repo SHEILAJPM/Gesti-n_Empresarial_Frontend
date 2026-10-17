@@ -1,0 +1,126 @@
+@keyframes subir {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes desaparecer {
+  to { opacity: 0; }
+}
+
+@keyframes escalar-entrada {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes escalar-salida {
+  to { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+@keyframes panel-entrada {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
+@keyframes panel-salida {
+  to { transform: translateX(100%); }
+}
+
+@keyframes toast-entrada {
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes toast-salida {
+  to { opacity: 0; transform: translateY(-10px) scale(0.98); height: 0; margin: 0; padding-block: 0; }
+}
+
+@keyframes progreso {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@keyframes brillo {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+@keyframes onda {
+  to { transform: scale(4); opacity: 0; }
+}
+
+@keyframes temblor {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulso {
+  0% { box-shadow: 0 0 0 0 var(--brand-glow); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes flotar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes trazar {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes crecer-barra {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+// Entrada escalonada: cada hijo con style="--i: n" aparece un poco después del anterior
+.escalonado > * {
+  animation: subir 0.6s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.entrada { animation: subir 0.55s var(--ease-out) both; }
+
+// Clases usadas con animate.enter / animate.leave de Angular
+.anim-fade-in { animation: aparecer 0.2s ease-out; }
+.anim-fade-out { animation: desaparecer 0.18s ease-in forwards; }
+.anim-pop-in { animation: escalar-entrada 0.32s var(--ease-out); }
+.anim-pop-out { animation: escalar-salida 0.18s ease-in forwards; }
+.anim-panel-in { animation: panel-entrada 0.42s var(--ease-out); }
+.anim-panel-out { animation: panel-salida 0.24s ease-in forwards; }
+.anim-toast-in { animation: toast-entrada 0.4s var(--ease-spring); }
+.anim-toast-out { animation: toast-salida 0.25s ease-in forwards; }
+
+// Transición entre páginas (router con withViewTransitions)
+::view-transition-old(root) { animation: desaparecer 0.12s ease-in both; }
+::view-transition-new(root) { animation: aparecer 0.22s ease-out both; }
+
+// Cambio de tema: el tema nuevo se revela en círculo desde el botón
+:root.cambiando-tema::view-transition-old(root) { animation: none; }
+:root.cambiando-tema::view-transition-new(root) {
+  animation: revelar-tema 0.65s var(--ease-out) both;
+}
+
+@keyframes revelar-tema {
+  from { clip-path: circle(0 at var(--tema-x, 50%) var(--tema-y, 0)); }
+  to { clip-path: circle(var(--tema-r, 150vmax) at var(--tema-x, 50%) var(--tema-y, 0)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

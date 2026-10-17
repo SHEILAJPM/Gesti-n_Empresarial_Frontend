@@ -1,0 +1,519 @@
+// ---------- Botones ----------
+.btn {
+  --btn-bg: var(--surface);
+  --btn-fg: var(--ink);
+  --btn-bd: var(--border-strong);
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--btn-bd);
+  border-radius: 10px;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.18s var(--ease-spring), box-shadow 0.2s ease,
+    background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+
+  &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  &:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  // Brillo que cruza el botón al pasar el mouse
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.7s var(--ease-out);
+    pointer-events: none;
+  }
+  &:hover:not(:disabled)::after { transform: translateX(120%); }
+
+  app-icon { flex-shrink: 0; }
+}
+
+.btn-primario {
+  --btn-bg: var(--brand);
+  --btn-fg: var(--brand-ink);
+  --btn-bd: transparent;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset, 0 6px 16px -6px var(--brand-glow);
+  &:hover:not(:disabled) {
+    --btn-bg: var(--brand-strong);
+    box-shadow: 0 10px 24px -8px var(--brand-glow);
+  }
+}
+
+.btn-peligro {
+  --btn-bg: var(--danger);
+  --btn-fg: #fff;
+  --btn-bd: transparent;
+}
+
+.btn-fantasma {
+  --btn-bg: transparent;
+  --btn-bd: transparent;
+  --btn-fg: var(--ink-2);
+  &:hover:not(:disabled) { --btn-bg: var(--surface-3); --btn-fg: var(--ink); box-shadow: none; }
+  &::after { display: none; }
+}
+
+.btn-sm { height: 32px; padding: 0 11px; font-size: 13px; border-radius: 8px; }
+.btn-icono { width: 38px; padding: 0; }
+.btn-icono.btn-sm { width: 32px; }
+.btn-bloque { width: 100%; }
+
+// Onda de clic (la agrega App en cualquier .btn)
+.onda {
+  position: absolute;
+  width: 40px; height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.22;
+  pointer-events: none;
+  animation: onda 0.6s ease-out forwards;
+}
+
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar 0.7s linear infinite;
+}
+
+// ---------- Tarjetas ----------
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s var(--ease-out),
+    background-color 0.3s ease;
+}
+
+.card-hover:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+.card-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 0;
+
+  h3 { font-size: 15px; font-weight: 650; }
+  p { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
+}
+
+.card-cuerpo { padding: 18px 20px 20px; }
+
+// ---------- Formularios ----------
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  > label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+    letter-spacing: 0.01em;
+  }
+}
+
+.control, select.control, textarea.control {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.3s ease;
+
+  &::placeholder { color: var(--ink-3); }
+  &:hover { border-color: var(--ink-3); }
+  &:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+  &.ng-invalid.ng-touched { border-color: var(--danger); box-shadow: 0 0 0 4px var(--danger-soft); }
+  &:disabled { background: var(--surface-3); color: var(--ink-3); }
+}
+
+textarea.control { height: auto; min-height: 90px; padding: 10px 12px; resize: vertical; }
+
+select.control {
+  appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237b889b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.control-icono {
+  position: relative;
+  > app-icon {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-3);
+    pointer-events: none;
+  }
+  > .control { padding-left: 38px; }
+}
+
+.ayuda { font-size: 12px; color: var(--ink-3); }
+
+.error-campo {
+  font-size: 12px;
+  color: var(--danger);
+  animation: subir 0.25s var(--ease-out);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  .completo { grid-column: 1 / -1; }
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+
+// Selector segmentado (Entrada/Salida, Trabajador/Proveedor...)
+.segmentado {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 4px;
+  border-radius: 11px;
+  background: var(--surface-3);
+  width: 100%;
+
+  button {
+    position: relative;
+    z-index: 1;
+    height: 34px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink-2);
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: color 0.2s ease;
+    &.activo { color: var(--ink); }
+  }
+
+  .indicador {
+    position: absolute;
+    top: 4px; bottom: 4px; left: 4px;
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.35s var(--ease-spring);
+  }
+}
+
+// Interruptor
+.switch {
+  position: relative;
+  width: 40px; height: 22px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+  flex-shrink: 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s var(--ease-spring);
+  }
+  &.on { background: var(--brand); }
+  &.on::before { transform: translateX(18px); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+// ---------- Etiquetas de estado ----------
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--surface-3);
+  color: var(--ink-2);
+
+  &.punto::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+.badge-brand { background: var(--brand-soft); color: var(--brand); }
+.badge-exito { background: var(--success-soft); color: var(--success); }
+.badge-peligro { background: var(--danger-soft); color: var(--danger); }
+.badge-alerta { background: var(--accent-soft); color: var(--accent); }
+.badge-info { background: var(--info-soft); color: var(--info); }
+
+// ---------- Tablas ----------
+.tabla-contenedor { overflow-x: auto; }
+
+.tabla {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13.5px;
+
+  th {
+    position: sticky;
+    top: 0;
+    padding: 11px 16px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-3);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    white-space: nowrap;
+
+    &.ordenable { cursor: pointer; user-select: none; }
+    &.ordenable:hover { color: var(--ink); }
+    &.right { text-align: right; }
+  }
+
+  td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background-color 0.15s ease;
+    animation: subir 0.4s var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 35ms);
+    &:hover { background: var(--surface-2); }
+    &:last-child td { border-bottom: 0; }
+  }
+
+  .acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    opacity: 0.55;
+    transition: opacity 0.2s ease;
+  }
+  tr:hover .acciones { opacity: 1; }
+}
+
+.celda-persona {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  strong { display: block; font-weight: 600; }
+  small { color: var(--ink-3); font-size: 12px; }
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+// Barra de filtros sobre una tabla
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+
+  .busqueda { flex: 1 1 240px; max-width: 360px; }
+  .control { height: 38px; }
+  select.control { width: auto; min-width: 150px; }
+}
+
+// Pestañas con indicador animado
+.pestanas {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+
+  button {
+    position: relative;
+    height: 46px;
+    padding: 0 12px;
+    border: 0;
+    background: none;
+    color: var(--ink-3);
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    display: inline-flex; align-items: center; gap: 7px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 10px; right: 10px; bottom: -1px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--brand);
+      transform: scaleX(0);
+      transition: transform 0.3s var(--ease-out);
+    }
+    &:hover { color: var(--ink); }
+    &.activa { color: var(--ink); }
+    &.activa::after { transform: scaleX(1); }
+
+    .contador {
+      min-width: 20px; height: 20px;
+      padding: 0 6px;
+      border-radius: 99px;
+      background: var(--surface-3);
+      font-size: 11.5px;
+      display: inline-grid; place-items: center;
+    }
+  }
+}
+
+// Carga
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface-3) 25%, var(--surface-2) 50%, var(--surface-3) 75%);
+  background-size: 200% 100%;
+  animation: brillo 1.4s ease-in-out infinite;
+}
+
+// Grillas de página
+.grid-kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  @media (max-width: 1000px) { grid-template-columns: 1fr; }
+}
+
+.pila { display: flex; flex-direction: column; gap: 20px; }
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+// Barra de vigencia (documentos, avance)
+.vida {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  overflow: hidden;
+  i {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: var(--success);
+    animation: llenar-ancho 1s 0.2s var(--ease-out) both;
+  }
+  i.badge-alerta { background: var(--accent); }
+  i.badge-peligro { background: var(--danger); }
+}
+
+@keyframes llenar-ancho { from { width: 0; } }
+
+// Resumen de importes en formularios (base, IGV, total)
+.desglose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border-strong);
+  div { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--ink-2); }
+  .total { padding-top: 8px; border-top: 1px solid var(--border); color: var(--ink); font-weight: 650; font-size: 15px; }
+}
+
+// Selección de rol con tarjetas
+.roles { display: grid; gap: 8px; }
+.rol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  strong { font-size: 14px; }
+  small { color: var(--ink-3); font-size: 12.5px; }
+  &:hover { border-color: var(--ink-3); }
+  &.elegido { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 3px var(--brand-soft); }
+  &:has(:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+}
+
+// Títulos de sección dentro de un formulario largo
+.form-seccion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 -4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--brand);
+  &:first-child { margin-top: 0; }
+}
+
+// Filas que abren un detalle al hacer clic
+.tabla tr.fila-clic { cursor: pointer; }
+.tabla tr.fila-clic a { color: inherit; }
+.tabla tr.fila-clic:hover a strong { color: var(--brand); }

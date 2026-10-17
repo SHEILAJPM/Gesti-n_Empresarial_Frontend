@@ -1,0 +1,93 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+p { margin: 0; }
+a { color: var(--brand); text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+::selection { background: var(--brand-soft); color: var(--ink); }
+
+// Cifras alineadas como en un estado financiero
+.mono, .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.muted { color: var(--ink-3); }
+.ink-2 { color: var(--ink-2); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.right { text-align: right; }
+.nowrap { white-space: nowrap; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+// Cuadrícula de papel contable: el detalle de identidad del sistema
+.papel-contable {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track { background: transparent; }
+
+// Impresión de la boleta de pago: solo se imprime .boleta
+@media print {
+  html.imprimiendo-boleta body * { visibility: hidden; }
+  html.imprimiendo-boleta .boleta,
+  html.imprimiendo-boleta .boleta * { visibility: visible; }
+  html.imprimiendo-boleta .boleta {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+  html.imprimiendo-boleta .boleta-contenedor { position: static; overflow: visible; box-shadow: none; }
+}
+
+// Mapas en modo oscuro: se invierten las teselas de OpenStreetMap para que no encandilen
+:root[data-theme='dark'] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9); }
+.leaflet-container { font-family: var(--font-body); }
