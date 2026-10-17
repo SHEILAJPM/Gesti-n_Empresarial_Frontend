@@ -1,0 +1,151 @@
+.saludo {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 22px 26px;
+  background-color: var(--surface);
+  animation: subir 0.5s var(--ease-out) both;
+}
+
+.avatar.grande { width: 60px; height: 60px; border-radius: 18px; font-size: 21px; box-shadow: var(--shadow-md); }
+
+.saludo-texto {
+  flex: 1;
+  min-width: 200px;
+  .fecha { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+  .fecha::first-letter { text-transform: uppercase; }
+  h1 { font-size: 26px; margin: 2px 0 4px; }
+  p { color: var(--ink-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+}
+
+.reloj {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  strong { font-size: 40px; font-weight: 500; letter-spacing: -0.04em; line-height: 1; }
+  small { font-size: 18px; color: var(--ink-3); }
+  span { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; }
+  b { color: var(--ink); font-weight: 600; }
+}
+
+.distribucion {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  @media (max-width: 960px) { grid-template-columns: 1fr; }
+}
+
+.marcador {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+}
+
+.estado-gps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  &.ok { background: var(--success-soft); color: var(--success); }
+  &.fuera { background: var(--danger-soft); color: var(--danger); }
+}
+
+// Botón circular principal
+.boton-marcar {
+  --c: var(--brand);
+  --c-suave: var(--brand-glow);
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border: 0;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--c) 75%, #fff), var(--c));
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 18px 40px -12px var(--c-suave), inset 0 -6px 0 rgba(0, 0, 0, 0.12);
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s ease, filter 0.2s ease;
+
+  &.salida { --c: #c2410c; --c-suave: rgba(194, 65, 12, 0.35); }
+  &:hover:not(:disabled) { transform: scale(1.04); }
+  &:active:not(:disabled) { transform: scale(0.96); }
+  &:disabled { filter: grayscale(0.6); opacity: 0.6; cursor: not-allowed; }
+
+  // Anillos que laten cuando está dentro de la zona
+  &.listo::before, &.listo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--c);
+    animation: anillo 2.2s ease-out infinite;
+  }
+  &.listo::after { animation-delay: 1.1s; }
+
+  .spinner { width: 34px; height: 34px; border-width: 3px; }
+}
+
+@keyframes anillo {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(1.35); opacity: 0; }
+}
+
+.resultado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-align: left;
+  background: var(--danger-soft);
+  animation: escalar-entrada 0.4s var(--ease-spring);
+  strong { display: block; color: var(--danger); }
+  small { color: var(--ink-2); font-size: 12.5px; }
+  &.ok { background: var(--success-soft); strong { color: var(--success); } }
+}
+
+.sello {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: #fff;
+  background: var(--danger);
+  .ok & { background: var(--success); }
+}
+
+.sin-sede {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 8px;
+  color: var(--accent);
+  strong { color: var(--ink); font-family: var(--font-display); font-size: 16px; }
+  p { color: var(--ink-3); font-size: 13.5px; }
+}
+
+.mapa-card app-mapa { --alto-mapa: 380px; }

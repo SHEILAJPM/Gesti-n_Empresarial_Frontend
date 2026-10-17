@@ -1,0 +1,118 @@
+@if (cargando() && !perfil()) {
+  <div class="pila">
+    <div class="skeleton" style="height: 120px; border-radius: 18px"></div>
+    <div class="skeleton" style="height: 380px; border-radius: 18px"></div>
+  </div>
+} @else if (perfil(); as p) {
+  <div class="pila">
+    <section class="saludo card papel-contable">
+      <span class="avatar grande" [style.background]="colorAvatar(p.trabajador.nombres)">{{ iniciales(p.trabajador.nombres) }}</span>
+      <div class="saludo-texto">
+        <span class="fecha">{{ ahora() | date: 'EEEE d \'de\' MMMM' }}</span>
+        <h1>Hola, {{ p.trabajador.nombres.split(' ')[0] }}</h1>
+        <p>{{ p.trabajador.cargo }} · {{ p.trabajador.area }} <span class="badge badge-brand">{{ nombresRol[p.rol] }}</span></p>
+      </div>
+      <div class="reloj">
+        <strong class="num">{{ ahora() | date: 'HH:mm' }}<small>{{ ahora() | date: ':ss' }}</small></strong>
+        <span>Hoy trabajado: <b class="num">{{ horasHoy() }}</b></span>
+      </div>
+    </section>
+
+    <div class="distribucion">
+      <article class="card marcador entrada">
+        @if (!sede()) {
+          <div class="sin-sede">
+            <app-icon name="ubicacion" [size]="28" />
+            <strong>La empresa aún no configuró su ubicación</strong>
+            <p>Avísale al administrador para que marque el punto de la empresa en «Sede y ubicación».</p>
+          </div>
+        } @else {
+          <div class="estado-gps" [class.ok]="dentro()" [class.fuera]="estadoGps() === 'listo' && !dentro()">
+            @switch (estadoGps()) {
+              @case ('buscando') { <span class="spinner"></span> Buscando tu ubicación… }
+              @case ('denegado') { <app-icon name="alerta" [size]="16" /> Diste «no» al permiso de ubicación. Actívalo en el navegador para marcar. }
+              @case ('no-disponible') { <app-icon name="alerta" [size]="16" /> No se pudo leer tu ubicación. Activa el GPS del celular. }
+              @case ('inseguro') { <app-icon name="candado" [size]="16" /> La ubicación solo funciona en una conexión segura (HTTPS). }
+              @case ('listo') {
+                <app-icon [name]="dentro() ? 'checkCirculo' : 'alerta'" [size]="16" />
+                @if (dentro()) {
+                  Estás a <b class="num">{{ distancia()! | number: '1.0-0' }} m</b> — dentro de la zona
+                } @else if (posicion()!.precision > sede()!.precisionMaxima) {
+                  Señal GPS débil (±{{ posicion()!.precision | number: '1.0-0' }} m). Acércate a una ventana o sal al exterior.
+                } @else {
+                  Estás a <b class="num">{{ distancia()! | number: '1.0-0' }} m</b> — fuera de la zona (máx. {{ sede()!.radioMetros }} m)
+                }
+              }
+            }
+          </div>
+
+          <button type="button" class="boton-marcar" [class.salida]="siguiente() === 'SALIDA'" [class.listo]="dentro() && !marcando()"
+            [disabled]="marcando() || estadoGps() === 'inseguro' || estadoGps() === 'denegado'" (click)="marcar()">
+            @if (marcando()) {
+              <span class="spinner"></span>
+              <span>Verificando…</span>
+            } @else {
+              <app-icon [name]="siguiente() === 'ENTRADA' ? 'entrar' : 'salir'" [size]="34" [grosor]="2" />
+              <span>Marcar {{ siguiente() === 'ENTRADA' ? 'entrada' : 'salida' }}</span>
+            }
+          </button>
+
+          @if (resultado(); as r) {
+            <div class="resultado" [class.ok]="r.ok">
+              <span class="sello"><app-icon [name]="r.ok ? 'check' : 'cerrar'" [size]="18" [grosor]="2.6" /></span>
+              <div>
+                <strong>{{ r.ok ? r.texto : 'No se registró la marcación' }}</strong>
+                <small>{{ r.ok ? (r.hora | date: 'HH:mm:ss') + ' · hora oficial del servidor' : r.texto }}</small>
+              </div>
+            </div>
+          }
+
+          <p class="ayuda">Debes estar a máximo <b>{{ sede()!.radioMetros }} m</b> de {{ sede()!.nombre }}. La hora la registra el sistema, no tu celular.</p>
+        }
+      </article>
+
+      <article class="card entrada mapa-card">
+        <header class="card-cabecera">
+          <div>
+            <h3>{{ sede()?.nombre ?? 'Ubicación' }}</h3>
+            <p>{{ sede()?.direccion || 'Zona permitida para marcar' }}</p>
+          </div>
+        </header>
+        <div class="card-cuerpo">
+          <app-mapa [centro]="centro()" [radio]="sede()?.radioMetros ?? 12" [posicion]="posicion()" />
+        </div>
+      </article>
+    </div>
+
+    <article class="card entrada">
+      <header class="card-cabecera">
+        <div>
+          <h3>Mis marcaciones</h3>
+          <p>Hoy: {{ marcacionesHoy().length }} · Total: {{ historial().length }}</p>
+        </div>
+      </header>
+      @if (tabla.filtradas().length) {
+        <div class="tabla-contenedor" style="margin-top: 12px">
+          <table class="tabla">
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Registrada por</th><th class="right">Distancia</th><th class="right">Hora</th></tr></thead>
+            <tbody>
+              @for (m of tabla.visibles(); track m.id; let i = $index) {
+                <tr [style.--i]="i">
+                  <td>{{ m.fechaHora | date: 'EEE d MMM y' }}</td>
+                  <td><span class="badge punto" [class.badge-exito]="m.tipo === 'ENTRADA'" [class.badge-info]="m.tipo === 'SALIDA'">{{ m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}</span></td>
+                  <td class="ink-2">{{ m.origen === 'PORTAL' ? 'Yo (celular)' : 'Recursos Humanos' }}</td>
+                  <td class="right num">{{ m.distanciaMetros !== null ? (m.distanciaMetros | number: '1.0-0') + ' m' : '—' }}</td>
+                  <td class="right num">{{ m.fechaHora | date: 'HH:mm:ss' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+          [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+      } @else {
+        <app-vacio icono="reloj" titulo="Aún no marcas asistencia" texto="Cuando llegues a la empresa, pulsa «Marcar entrada»." />
+      }
+    </article>
+  </div>
+}
