@@ -1,0 +1,121 @@
+<div class="pila">
+  <app-page-header seccion="Recursos humanos" titulo="Asistencia"
+    descripcion="Registra entradas y salidas del personal y revisa el historial por día." />
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Presentes ahora" [valor]="presentes()" icono="checkCirculo" tono="exito" [cargando]="cargando()"
+      detalle="con entrada sin salida" />
+    <app-stat-card style="--i: 1" titulo="Entradas de hoy" [valor]="entradasHoy()" icono="entrar" [cargando]="cargando()" />
+    <app-stat-card style="--i: 2" titulo="Sin marcar hoy" [valor]="sinMarcar()" icono="alerta" tono="alerta" [cargando]="cargando()"
+      detalle="trabajadores activos" />
+  </section>
+
+  <div class="distribucion">
+    <article class="card marcador entrada">
+      <div class="reloj papel-contable">
+        <span class="dia">{{ ahora() | date: 'EEEE d \'de\' MMMM' }}</span>
+        <strong class="hora num">{{ ahora() | date: 'HH:mm' }}<small>{{ ahora() | date: ':ss' }}</small></strong>
+      </div>
+
+      <div class="card-cuerpo pila">
+        <div class="campo">
+          <label for="trabajador">Trabajador</label>
+          <select id="trabajador" #sel class="control" [value]="documento()" (change)="elegir(sel.value)">
+            <option value="">Selecciona a quién marca…</option>
+            @for (t of opciones(); track t.id) {
+              <option [value]="t.documentoIdentidad">{{ t.nombres }} · {{ t.documentoIdentidad }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label>Tipo de marcación</label>
+          <div class="segmentado">
+            <span class="indicador" [style.width]="'calc(50% - 4px)'" [style.transform]="tipo() === 'SALIDA' ? 'translateX(100%)' : 'none'"></span>
+            <button type="button" [class.activo]="tipo() === 'ENTRADA'" (click)="tipo.set('ENTRADA')"><app-icon name="entrar" [size]="16" /> Entrada</button>
+            <button type="button" [class.activo]="tipo() === 'SALIDA'" (click)="tipo.set('SALIDA')"><app-icon name="salir" [size]="16" /> Salida</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primario btn-bloque marcar" [class.listo]="documento()" [disabled]="marcando()" (click)="marcar()">
+          @if (marcando()) {
+            <span class="spinner"></span> Registrando…
+          } @else {
+            <app-icon name="reloj" [size]="18" /> Registrar {{ tipo() === 'ENTRADA' ? 'entrada' : 'salida' }}
+          }
+        </button>
+
+        @if (ultimaMarcada(); as u) {
+          <div class="confirmacion">
+            <span class="sello"><app-icon name="check" [size]="18" [grosor]="2.6" /></span>
+            <div>
+              <strong>{{ u.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }} registrada</strong>
+              <small>{{ u.nombre }} · {{ u.fechaHora | date: 'HH:mm:ss' }}</small>
+            </div>
+          </div>
+        }
+
+        <p class="proximo">
+          <app-icon name="ubicacion" [size]="15" />
+          Próxima fase: cada trabajador marcará desde su celular y el sistema validará que esté dentro del radio de la sede (GPS).
+        </p>
+      </div>
+    </article>
+
+    <article class="card entrada">
+      <div class="filtros">
+        <div class="control-icono busqueda">
+          <app-icon name="buscar" [size]="16" />
+          <input #b class="control" placeholder="Buscar trabajador o DNI…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+        </div>
+        <input #f type="date" class="control" style="width: auto" [value]="filtroFecha()" (change)="filtroFecha.set(f.value); tabla.pagina.set(1)" aria-label="Fecha" />
+        <select #t class="control" [value]="filtroTipo()" (change)="filtroTipo.set(t.value); tabla.pagina.set(1)" aria-label="Tipo">
+          <option value="">Entradas y salidas</option>
+          <option value="ENTRADA">Solo entradas</option>
+          <option value="SALIDA">Solo salidas</option>
+        </select>
+        @if (filtroFecha()) {
+          <button type="button" class="btn btn-sm btn-fantasma" (click)="filtroFecha.set(''); tabla.pagina.set(1)">Ver todas las fechas</button>
+        }
+      </div>
+
+      @if (cargando()) {
+        <div class="card-cuerpo pila">
+          @for (i of [1, 2, 3, 4, 5]; track i) { <div class="skeleton" style="height: 44px"></div> }
+        </div>
+      } @else if (tabla.filtradas().length) {
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead>
+              <tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th class="right">Hora</th></tr>
+            </thead>
+            <tbody>
+              @for (m of tabla.visibles(); track m.id; let i = $index) {
+                <tr [style.--i]="i">
+                  <td>
+                    <div class="celda-persona">
+                      <span class="avatar" [style.background]="colorAvatar(m.nombre)">{{ iniciales(m.nombre) }}</span>
+                      <div><strong>{{ m.nombre }}</strong><small class="mono">{{ m.documento }}</small></div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge punto" [class.badge-exito]="m.tipo === 'ENTRADA'" [class.badge-info]="m.tipo === 'SALIDA'">
+                      {{ m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}
+                    </span>
+                  </td>
+                  <td>{{ m.fechaHora | date: 'EEE d MMM y' }}</td>
+                  <td class="right num">{{ m.fechaHora | date: 'HH:mm:ss' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+          [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+      } @else {
+        <app-vacio icono="reloj" titulo="Sin marcaciones"
+          [texto]="filtroFecha() ? 'No hay registros para esta fecha. Prueba con otro día.' : 'Todavía no se registraron marcaciones.'" />
+      }
+    </article>
+  </div>
+</div>

@@ -1,0 +1,96 @@
+<div class="pila">
+  <app-page-header seccion="Recursos humanos" titulo="Documentos del personal"
+    descripcion="Controla contratos, exámenes médicos y demás documentos con fecha de vencimiento.">
+    <button type="button" class="btn btn-primario" (click)="nuevo()"><app-icon name="mas" [size]="17" /> Registrar documento</button>
+  </app-page-header>
+
+  <article class="card entrada">
+    <nav class="pestanas" aria-label="Estado de los documentos">
+      @for (p of pestanas; track p.id) {
+        <button type="button" [class.activa]="pestana() === p.id" (click)="cambiarPestana(p.id)">
+          {{ p.titulo }} <span class="contador num">{{ conteo()[p.id] }}</span>
+        </button>
+      }
+    </nav>
+
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar por trabajador, DNI o tipo de documento…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Trabajador</th><th>Documento</th><th>Vencimiento</th><th>Vigencia</th><th class="right">Estado</th></tr>
+          </thead>
+          <tbody>
+            @for (d of tabla.visibles(); track d.id; let i = $index) {
+              @let e = estado(d);
+              <tr [style.--i]="i">
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(d.nombre)">{{ iniciales(d.nombre) }}</span>
+                    <div><strong>{{ d.nombre }}</strong><small class="mono">{{ d.dni }}</small></div>
+                  </div>
+                </td>
+                <td>{{ d.tipo }}</td>
+                <td class="nowrap">{{ d.fechaVencimiento | date: 'd MMM y' }}</td>
+                <td style="min-width: 140px">
+                  <div class="vida"><i [style.width.%]="vida(d)" [class]="e.clase"></i></div>
+                </td>
+                <td class="right"><span class="badge punto" [class]="e.clase">{{ e.texto }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="documento" [titulo]="pestana() === 'vencidos' ? 'Nada vencido' : 'Sin documentos'"
+        [texto]="pestana() === 'vencidos' ? 'Todos los documentos están al día.' : 'No hay documentos en esta vista.'" />
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Recursos humanos"
+  titulo="Registrar documento" descripcion="Te avisaremos en el panel cuando falten 30 días para su vencimiento.">
+  <form id="form-documento" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo completo">
+      <label for="doc-trabajador">Trabajador</label>
+      <select id="doc-trabajador" class="control" formControlName="documentoIdentidad">
+        <option value="">Selecciona un trabajador…</option>
+        @for (t of trabajadores(); track t.id) {
+          <option [value]="t.documentoIdentidad">{{ t.nombres }} · {{ t.documentoIdentidad }}</option>
+        }
+      </select>
+      <app-error-campo [control]="form.controls.documentoIdentidad" />
+    </div>
+    <div class="campo completo">
+      <label for="doc-tipo">Tipo de documento</label>
+      <input id="doc-tipo" class="control" formControlName="tipo" list="tipos-doc" placeholder="Ej. Examen médico ocupacional" />
+      <datalist id="tipos-doc">
+        @for (t of tiposSugeridos; track t) { <option [value]="t"></option> }
+      </datalist>
+      <app-error-campo [control]="form.controls.tipo" />
+    </div>
+    <div class="campo">
+      <label for="doc-fecha">Fecha de vencimiento</label>
+      <input id="doc-fecha" type="date" class="control" formControlName="fechaVencimiento" />
+      <app-error-campo [control]="form.controls.fechaVencimiento" />
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-documento" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> Guardar }
+    </button>
+  </ng-container>
+</app-panel>

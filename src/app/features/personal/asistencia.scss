@@ -1,0 +1,68 @@
+.distribucion {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  @media (max-width: 1000px) { grid-template-columns: 1fr; }
+}
+
+.marcador { overflow: hidden; position: sticky; top: calc(var(--topbar-h) + 20px); }
+
+.reloj {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 26px 20px 22px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface-2);
+}
+
+.dia { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.dia::first-letter { text-transform: uppercase; }
+
+.hora {
+  font-size: 52px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: var(--ink);
+  small { font-size: 22px; color: var(--ink-3); }
+}
+
+.marcar { height: 50px; font-size: 15px; }
+.marcar.listo:not(:disabled) { animation: pulso 2s infinite; }
+
+.confirmacion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--success-soft);
+  animation: escalar-entrada 0.4s var(--ease-spring);
+  strong { display: block; color: var(--success); }
+  small { color: var(--ink-2); }
+}
+
+.sello {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+  animation: escalar-entrada 0.5s 0.1s var(--ease-spring) both;
+}
+
+.proximo {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  app-icon { color: var(--brand); margin-top: 1px; }
+}

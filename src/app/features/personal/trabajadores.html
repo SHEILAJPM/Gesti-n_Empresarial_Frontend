@@ -1,0 +1,122 @@
+<div class="pila">
+  <app-page-header seccion="Recursos humanos" titulo="Trabajadores"
+    descripcion="Ficha del personal: datos personales, laborales, de pensión y de pago.">
+    @if (puedeEditar) {
+      <button type="button" class="btn btn-primario" (click)="nuevo()"><app-icon name="mas" [size]="17" /> Nuevo trabajador</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Personal activo" [valor]="cantidadActivos()" icono="usuarios" [cargando]="cargando()"
+      [detalle]="trabajadores().length - cantidadActivos() + ' dados de baja'" />
+    <app-stat-card style="--i: 1" titulo="Planilla mensual" [valor]="planilla()" formato="soles" icono="billetera" tono="info"
+      [cargando]="cargando()" detalle="suma de sueldos del personal activo" />
+    <app-stat-card style="--i: 2" titulo="Áreas" [valor]="areas().length" icono="edificio" tono="exito" [cargando]="cargando()" />
+    <app-stat-card style="--i: 3" titulo="Fichas incompletas" [valor]="fichasIncompletas()" icono="alerta"
+      [tono]="fichasIncompletas() ? 'alerta' : 'exito'" [cargando]="cargando()" detalle="sin ingreso, sueldo o pensión" />
+  </section>
+
+  <article class="card entrada">
+    <nav class="pestanas" aria-label="Estado del personal">
+      <button type="button" [class.activa]="filtroEstado() === 'ACTIVO'" (click)="cambiarEstado('ACTIVO')">
+        Activos <span class="contador num">{{ cantidadActivos() }}</span>
+      </button>
+      <button type="button" [class.activa]="filtroEstado() === 'CESADO'" (click)="cambiarEstado('CESADO')">
+        Dados de baja <span class="contador num">{{ trabajadores().length - cantidadActivos() }}</span>
+      </button>
+      <button type="button" [class.activa]="filtroEstado() === ''" (click)="cambiarEstado('')">
+        Todos <span class="contador num">{{ trabajadores().length }}</span>
+      </button>
+    </nav>
+
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar por nombre, DNI, cargo o área…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+      <select #a class="control" [value]="filtroArea()" (change)="filtroArea.set(a.value); tabla.pagina.set(1)" aria-label="Filtrar por área">
+        <option value="">Todas las áreas</option>
+        @for (area of areas(); track area) { <option [value]="area">{{ area }}</option> }
+      </select>
+      <button type="button" class="btn btn-fantasma btn-icono" (click)="cargar()" aria-label="Recargar"><app-icon name="recargar" [size]="17" /></button>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4, 5]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('nombres')">Trabajador {{ tabla.flecha('nombres') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('cargo')">Cargo y área {{ tabla.flecha('cargo') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('fechaIngreso')">Antigüedad {{ tabla.flecha('fechaIngreso') }}</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('sueldo')">Sueldo {{ tabla.flecha('sueldo') }}</th>
+              <th>Estado</th>
+              @if (puedeEditar) { <th class="right">Acciones</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of tabla.visibles(); track t.id; let i = $index) {
+              <tr [style.--i]="i" class="fila-clic" (click)="verFicha(t)">
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(t.nombres)">{{ iniciales(t.nombres) }}</span>
+                    <div>
+                      <a [routerLink]="['/personal', t.id]" (click)="$event.stopPropagation()"><strong>{{ t.nombres }}</strong></a>
+                      <small class="mono">{{ t.documentoIdentidad }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="celda-persona"><div><strong style="font-weight: 500">{{ t.cargo || '—' }}</strong><small>{{ t.area || 'Sin área' }}</small></div></div>
+                </td>
+                <td class="nowrap">
+                  @if (t.fechaIngreso) {
+                    {{ antiguedad(t.fechaIngreso, t.fechaCese) }}
+                  } @else {
+                    <span class="badge badge-alerta">Sin fecha de ingreso</span>
+                  }
+                </td>
+                <td class="right num">{{ t.sueldo !== null ? soles(t.sueldo) : '—' }}</td>
+                <td>
+                  <span class="badge punto" [class.badge-exito]="t.estado === 'ACTIVO'" [class.badge-peligro]="t.estado === 'CESADO'">
+                    {{ t.estado === 'ACTIVO' ? 'Activo' : 'De baja' }}
+                  </span>
+                </td>
+                @if (puedeEditar) {
+                  <td>
+                    <div class="acciones">
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="editar(t, $event)" aria-label="Editar ficha"><app-icon name="editar" [size]="16" /></button>
+                      @if (t.estado === 'ACTIVO') {
+                        <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="darDeBaja(t, $event)" aria-label="Dar de baja"><app-icon name="salir" [size]="16" /></button>
+                      } @else {
+                        <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="reactivar(t, $event)" aria-label="Reactivar"><app-icon name="recargar" [size]="16" /></button>
+                      }
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="usuarios" [titulo]="trabajadores().length ? 'Sin coincidencias' : 'Aún no hay trabajadores'"
+        [texto]="trabajadores().length ? 'Prueba con otro término o cambia de pestaña.' : 'Registra al primer trabajador para empezar a controlar su asistencia y documentos.'">
+        @if (!trabajadores().length && puedeEditar) {
+          <button type="button" class="btn btn-primario" (click)="nuevo()"><app-icon name="mas" [size]="17" /> Registrar trabajador</button>
+        }
+      </app-vacio>
+    }
+  </article>
+</div>
+
+<app-form-trabajador [abierto]="formAbierto()" [trabajador]="editando()" [areas]="areas()"
+  (cerrar)="formAbierto.set(false)" (guardado)="alGuardar($event)" />
+<app-cese-trabajador [abierto]="ceseAbierto()" [trabajador]="cesando()"
+  (cerrar)="ceseAbierto.set(false)" (guardado)="alCesar($event)" />

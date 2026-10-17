@@ -1,0 +1,197 @@
+<a class="volver" routerLink="/personal"><app-icon name="izquierda" [size]="16" /> Trabajadores</a>
+
+@if (cargando()) {
+  <div class="pila">
+    <div class="skeleton" style="height: 168px; border-radius: 18px"></div>
+    <div class="skeleton" style="height: 320px; border-radius: 18px"></div>
+  </div>
+} @else if (noEncontrado()) {
+  <article class="card">
+    <app-vacio icono="usuarios" titulo="Trabajador no encontrado" texto="Puede que haya sido eliminado o que el enlace no sea correcto.">
+      <a class="btn" routerLink="/personal">Volver a la lista</a>
+    </app-vacio>
+  </article>
+} @else if (trabajador(); as t) {
+  <div class="pila">
+    <section class="cabecera card papel-contable" [class.cesado]="!activo()">
+      <span class="avatar grande" [style.background]="colorAvatar(t.nombres)">{{ iniciales(t.nombres) }}</span>
+
+      <div class="identidad">
+        <div class="nombre">
+          <h1>{{ t.nombres }}</h1>
+          <span class="badge punto" [class.badge-exito]="activo()" [class.badge-peligro]="!activo()">{{ activo() ? 'Activo' : 'De baja' }}</span>
+        </div>
+        <p>{{ t.cargo || 'Sin cargo' }} · {{ t.area || 'Sin área' }} · <span class="mono">{{ t.documentoIdentidad }}</span></p>
+
+        <dl class="datos-rapidos">
+          <div><dt>Antigüedad</dt><dd>{{ antiguedad(t.fechaIngreso, t.fechaCese) }}</dd></div>
+          <div><dt>Ingreso</dt><dd>{{ t.fechaIngreso ? (t.fechaIngreso | date: 'd MMM y') : '—' }}</dd></div>
+          <div><dt>Sueldo</dt><dd class="num">{{ t.sueldo !== null ? soles(t.sueldo) : '—' }}</dd></div>
+          <div><dt>Edad</dt><dd>{{ edad() !== null ? edad() + ' años' : '—' }}</dd></div>
+        </dl>
+      </div>
+
+      @if (puedeEditar) {
+        <div class="acciones-cabecera">
+          <button type="button" class="btn btn-primario" (click)="formAbierto.set(true)"><app-icon name="editar" [size]="16" /> Editar ficha</button>
+          @if (activo()) {
+            <button type="button" class="btn" (click)="ceseAbierto.set(true)"><app-icon name="salir" [size]="16" /> Dar de baja</button>
+          } @else {
+            <button type="button" class="btn" (click)="reactivar()"><app-icon name="recargar" [size]="16" /> Reactivar</button>
+          }
+          <button type="button" class="btn btn-fantasma btn-icono" (click)="eliminar()" aria-label="Eliminar registro"><app-icon name="eliminar" [size]="16" /></button>
+        </div>
+      }
+    </section>
+
+    @if (!activo()) {
+      <div class="aviso aviso-peligro entrada">
+        <app-icon name="salir" [size]="18" />
+        <div>
+          <strong>Dado de baja el {{ t.fechaCese | date: 'd \'de\' MMMM \'de\' y' }}</strong>
+          <span>{{ t.motivoCese }}</span>
+        </div>
+      </div>
+    } @else if (pendientes().length && puedeEditar) {
+      <div class="aviso aviso-alerta entrada">
+        <app-icon name="alerta" [size]="18" />
+        <div>
+          <strong>Ficha incompleta</strong>
+          <span>Falta: {{ pendientes().join(', ') }}. Son necesarios para la planilla y los pagos.</span>
+        </div>
+        <button type="button" class="btn btn-sm" (click)="formAbierto.set(true)">Completar</button>
+      </div>
+    }
+
+    <article class="card entrada">
+      <nav class="pestanas" aria-label="Secciones de la ficha">
+        @for (p of pestanas(); track p.id) {
+          <button type="button" [class.activa]="pestana() === p.id" (click)="pestana.set(p.id)">
+            {{ p.titulo }}
+            @if (p.cantidad !== null) { <span class="contador num">{{ p.cantidad }}</span> }
+          </button>
+        }
+      </nav>
+
+      @switch (pestana()) {
+        @case ('ficha') {
+          <div class="ficha escalonado">
+            <section style="--i: 0">
+              <h3><app-icon name="usuario" [size]="16" /> Datos personales</h3>
+              <dl>
+                <div><dt>Documento</dt><dd class="mono">{{ t.documentoIdentidad }}</dd></div>
+                <div><dt>Fecha de nacimiento</dt><dd>@if (t.fechaNacimiento) { {{ t.fechaNacimiento | date: 'd MMM y' }} } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+                <div><dt>Teléfono</dt><dd>@if (t.telefono) { <a [href]="'tel:' + t.telefono">{{ t.telefono }}</a> } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+                <div><dt>Correo</dt><dd>@if (t.correo) { <a [href]="'mailto:' + t.correo">{{ t.correo }}</a> } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+                <div><dt>Dirección</dt><dd>@if (t.direccion) { {{ t.direccion }} } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+              </dl>
+            </section>
+            <section style="--i: 1">
+              <h3><app-icon name="edificio" [size]="16" /> Datos laborales</h3>
+              <dl>
+                <div><dt>Cargo</dt><dd>{{ t.cargo || '—' }}</dd></div>
+                <div><dt>Área</dt><dd>{{ t.area || '—' }}</dd></div>
+                <div><dt>Fecha de ingreso</dt><dd>@if (t.fechaIngreso) { {{ t.fechaIngreso | date: 'd MMM y' }} } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+                <div><dt>Sueldo mensual</dt><dd class="num">@if (t.sueldo !== null) { {{ soles(t.sueldo) }} } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+                @if (t.fechaCese) {
+                  <div><dt>Fecha de cese</dt><dd>{{ t.fechaCese | date: 'd MMM y' }}</dd></div>
+                }
+              </dl>
+            </section>
+            <section style="--i: 2">
+              <h3><app-icon name="billetera" [size]="16" /> Pensión y pago</h3>
+              <dl>
+                <div><dt>Sistema de pensiones</dt><dd>@if (t.sistemaPension) { {{ t.sistemaPension }}{{ t.afp ? ' · ' + t.afp : '' }} } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+                <div><dt>Banco</dt><dd>@if (t.banco) { {{ t.banco }} } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+                <div><dt>N.° de cuenta</dt><dd class="mono">@if (t.numeroCuenta) { {{ t.numeroCuenta }} } @else { <span class="vacio">Sin registrar</span> }</dd></div>
+              </dl>
+            </section>
+          </div>
+        }
+
+        @case ('asistencia') {
+          <div class="mini-kpis">
+            <div><span>Días asistidos este mes</span><strong class="num">{{ resumenMes().dias }}</strong></div>
+            <div><span>Entradas del mes</span><strong class="num">{{ resumenMes().entradas }}</strong></div>
+            <div><span>Última marcación</span>
+              <strong>{{ resumenMes().ultima ? (resumenMes().ultima!.fechaHora | date: 'd MMM, HH:mm') : '—' }}</strong></div>
+          </div>
+          @if (tablaAsistencia.filtradas().length) {
+            <div class="tabla-contenedor">
+              <table class="tabla">
+                <thead><tr><th>Fecha</th><th>Tipo</th><th class="right">Hora</th></tr></thead>
+                <tbody>
+                  @for (m of tablaAsistencia.visibles(); track m.id; let i = $index) {
+                    <tr [style.--i]="i">
+                      <td>{{ m.fechaHora | date: 'EEEE d MMM y' }}</td>
+                      <td><span class="badge punto" [class.badge-exito]="m.tipo === 'ENTRADA'" [class.badge-info]="m.tipo === 'SALIDA'">{{ m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}</span></td>
+                      <td class="right num">{{ m.fechaHora | date: 'HH:mm:ss' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <app-paginador [pagina]="tablaAsistencia.pagina()" [paginas]="tablaAsistencia.paginas()" [total]="tablaAsistencia.filtradas().length"
+              [tamano]="tablaAsistencia.tamano" (cambiar)="tablaAsistencia.pagina.set($event)" />
+          } @else {
+            <app-vacio icono="reloj" titulo="Sin marcaciones" texto="Este trabajador todavía no registra asistencia." />
+          }
+        }
+
+        @case ('documentos') {
+          @if (documentosOrdenados().length) {
+            <ul class="lista-docs">
+              @for (d of documentosOrdenados(); track d.id; let i = $index) {
+                @let e = estadoDocumento(d);
+                <li [style.--i]="i">
+                  <span class="icono-doc" [class]="e.clase"><app-icon name="documento" [size]="17" /></span>
+                  <div><strong>{{ d.tipo }}</strong><small>Vence el {{ d.fechaVencimiento | date: 'd MMM y' }}</small></div>
+                  <span class="badge punto" [class]="e.clase">{{ e.texto }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <app-vacio icono="documento" titulo="Sin documentos" texto="Registra su contrato, examen médico u otros documentos.">
+              <a class="btn" routerLink="/documentos">Ir a Documentos</a>
+            </app-vacio>
+          }
+        }
+
+        @case ('pagos') {
+          <div class="mini-kpis">
+            <div><span>Total pagado</span><strong class="num">{{ soles(totalPagado()) }}</strong></div>
+            <div><span>Pagos registrados</span><strong class="num">{{ pagos().length }}</strong></div>
+          </div>
+          @if (pagosOrdenados().length) {
+            <div class="tabla-contenedor">
+              <table class="tabla">
+                <thead><tr><th>Concepto</th><th>Programado</th><th class="right">Monto</th><th>Estado</th></tr></thead>
+                <tbody>
+                  @for (p of pagosOrdenados(); track p.id; let i = $index) {
+                    <tr [style.--i]="i">
+                      <td>{{ p.concepto }}</td>
+                      <td>{{ p.fechaProgramada | date: 'd MMM y' }}</td>
+                      <td class="right num"><strong>{{ soles(p.monto) }}</strong></td>
+                      <td>
+                        <span class="badge punto" [class.badge-exito]="p.estado === 'PAGADO'"
+                          [class.badge-peligro]="p.estado === 'PENDIENTE' && diasHasta(p.fechaProgramada) < 0"
+                          [class.badge-alerta]="p.estado === 'PENDIENTE' && diasHasta(p.fechaProgramada) >= 0">
+                          {{ p.estado === 'PAGADO' ? 'Pagado' : 'Pendiente' }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <app-vacio icono="billetera" titulo="Sin pagos" texto="Todavía no se le han programado pagos." />
+          }
+        }
+      }
+    </article>
+  </div>
+
+  <app-form-trabajador [abierto]="formAbierto()" [trabajador]="t" (cerrar)="formAbierto.set(false)" (guardado)="alGuardar($event)" />
+  <app-cese-trabajador [abierto]="ceseAbierto()" [trabajador]="t" (cerrar)="ceseAbierto.set(false)" (guardado)="alGuardar($event)" />
+}
