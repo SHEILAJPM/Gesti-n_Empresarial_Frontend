@@ -1,0 +1,142 @@
+<div class="pila">
+  <app-page-header seccion="Finanzas" titulo="Pagos" descripcion="Programa y registra pagos a trabajadores y proveedores.">
+    <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Programar pago</button>
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Por pagar" [valor]="porPagar()" formato="soles" icono="billetera" tono="alerta"
+      [cargando]="cargando()" [detalle]="conteo().pendientes + ' pagos pendientes'" />
+    <app-stat-card style="--i: 1" titulo="Vencido" [valor]="vencido()" formato="soles" icono="alerta" tono="peligro"
+      [cargando]="cargando()" [detalle]="conteo().vencidos + ' pagos atrasados'" />
+    <app-stat-card style="--i: 2" titulo="Próximos 7 días" [valor]="proximaSemana()" formato="soles" icono="calendario" tono="info"
+      [cargando]="cargando()" />
+    <app-stat-card style="--i: 3" titulo="Pagado" [valor]="pagado()" formato="soles" icono="checkCirculo" tono="exito"
+      [cargando]="cargando()" [detalle]="conteo().pagados + ' pagos realizados'" />
+  </section>
+
+  <article class="card entrada">
+    <nav class="pestanas" aria-label="Estado de los pagos">
+      @for (p of pestanas; track p.id) {
+        <button type="button" [class.activa]="pestana() === p.id" (click)="cambiarPestana(p.id)">
+          {{ p.titulo }} <span class="contador num">{{ conteo()[p.id] }}</span>
+        </button>
+      }
+    </nav>
+
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Beneficiario o concepto…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('beneficiario')">Beneficiario {{ tabla.flecha('beneficiario') }}</th>
+              <th>Concepto</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('fechaProgramada')">Programado {{ tabla.flecha('fechaProgramada') }}</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('monto')">Monto {{ tabla.flecha('monto') }}</th>
+              <th>Estado</th>
+              <th class="right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of tabla.visibles(); track p.id; let i = $index) {
+              @let v = vencimiento(p);
+              <tr [style.--i]="i">
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(p.beneficiario)">{{ iniciales(p.beneficiario) }}</span>
+                    <div>
+                      <strong>{{ p.beneficiario }}</strong>
+                      <small><span class="badge" style="height: 18px; font-size: 10.5px">{{ p.tipoBeneficiario === 'TRABAJADOR' ? 'Trabajador' : 'Proveedor' }}</span>
+                        <span class="mono"> {{ p.identificacion }}</span></small>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ p.concepto }}</td>
+                <td class="nowrap">
+                  {{ p.fechaProgramada | date: 'd MMM y' }}
+                  @if (p.fechaPago) { <small class="muted" style="display: block">Pagado el {{ p.fechaPago | date: 'd MMM, HH:mm' }}</small> }
+                </td>
+                <td class="right num"><strong>{{ soles(p.monto) }}</strong></td>
+                <td><span class="badge punto" [class]="v.clase">{{ v.texto }}</span></td>
+                <td>
+                  <div class="acciones" style="opacity: 1">
+                    @if (p.estado === 'PENDIENTE') {
+                      <button type="button" class="btn btn-sm" [class.btn-primario]="p.dias <= 0" [disabled]="pagandoId() === p.id" (click)="pagar(p)">
+                        @if (pagandoId() === p.id) { <span class="spinner"></span> } @else { <app-icon name="check" [size]="15" /> }
+                        Pagar
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio [icono]="pestana() === 'pagados' ? 'billetera' : 'checkCirculo'"
+        [titulo]="pestana() === 'vencidos' ? 'Nada vencido' : pestana() === 'pendientes' ? 'Sin pagos pendientes' : 'Sin pagos'"
+        [texto]="pestana() === 'pendientes' || pestana() === 'vencidos' ? 'Estás al día con tus obligaciones.' : 'No hay pagos en esta vista.'" />
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Finanzas" titulo="Programar pago"
+  descripcion="Queda pendiente hasta que lo marques como pagado.">
+  <form id="form-pago" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo completo">
+      <label>Pagar a</label>
+      <div class="segmentado">
+        <span class="indicador" [style.width]="'calc(50% - 4px)'" [style.transform]="tipo() === 'PROVEEDOR' ? 'translateX(100%)' : 'none'"></span>
+        <button type="button" [class.activo]="tipo() === 'TRABAJADOR'" (click)="cambiarTipo('TRABAJADOR')"><app-icon name="usuario" [size]="16" /> Trabajador</button>
+        <button type="button" [class.activo]="tipo() === 'PROVEEDOR'" (click)="cambiarTipo('PROVEEDOR')"><app-icon name="camion" [size]="16" /> Proveedor</button>
+      </div>
+    </div>
+    <div class="campo completo">
+      <label for="pg-ben">{{ tipo() === 'TRABAJADOR' ? 'Trabajador' : 'Proveedor' }}</label>
+      <select id="pg-ben" class="control" formControlName="beneficiario">
+        <option value="">Selecciona…</option>
+        @if (tipo() === 'TRABAJADOR') {
+          @for (t of trabajadores(); track t.id) { <option [value]="t.documentoIdentidad">{{ t.nombres }} · DNI {{ t.documentoIdentidad }}</option> }
+        } @else {
+          @for (p of proveedores(); track p.id) { <option [value]="p.ruc">{{ p.razonSocial }} · RUC {{ p.ruc }}</option> }
+        }
+      </select>
+      <app-error-campo [control]="form.controls.beneficiario" />
+    </div>
+    <div class="campo completo">
+      <label for="pg-concepto">Concepto</label>
+      <input id="pg-concepto" class="control" formControlName="concepto"
+        [placeholder]="tipo() === 'TRABAJADOR' ? 'Ej. Sueldo de octubre' : 'Ej. Pago factura F001-102'" />
+      <app-error-campo [control]="form.controls.concepto" />
+    </div>
+    <div class="campo">
+      <label for="pg-monto">Monto (S/)</label>
+      <input id="pg-monto" type="number" step="0.01" min="0" class="control num" formControlName="monto" />
+      <app-error-campo [control]="form.controls.monto" [mensajes]="{ min: 'El monto debe ser mayor a cero.' }" />
+    </div>
+    <div class="campo">
+      <label for="pg-fecha">Fecha programada</label>
+      <input id="pg-fecha" type="date" class="control" formControlName="fechaProgramada" />
+      <app-error-campo [control]="form.controls.fechaProgramada" />
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-pago" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> Programar }
+    </button>
+  </ng-container>
+</app-panel>

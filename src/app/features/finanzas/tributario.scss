@@ -1,0 +1,84 @@
+.distribucion {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  @media (max-width: 1000px) { grid-template-columns: 1fr; }
+}
+
+.selector-mes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  .mes {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 180px;
+    justify-content: center;
+    font-weight: 650;
+    color: var(--ink);
+  }
+}
+
+.liquidacion { padding: 28px; background-color: var(--surface); overflow: hidden; }
+
+.resultado {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  .etiqueta { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+  strong { font-size: 44px; font-weight: 600; letter-spacing: -0.04em; color: var(--ink); line-height: 1.15; }
+  &.favor .etiqueta { color: var(--success); }
+}
+
+.balanza { margin-top: 28px; display: flex; flex-direction: column; gap: 4px; }
+
+.fila {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 120px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  strong { text-align: right; font-weight: 500; }
+  &.total { font-weight: 650; strong { font-weight: 650; font-size: 16px; } }
+  @media (max-width: 640px) { grid-template-columns: 1fr auto; .riel { display: none; } }
+}
+
+.fila-texto {
+  display: flex;
+  flex-direction: column;
+  span { display: flex; align-items: center; gap: 8px; }
+  small { color: var(--ink-3); font-size: 12px; }
+  i { width: 9px; height: 9px; border-radius: 3px; }
+}
+
+.riel {
+  height: 10px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  overflow: hidden;
+  i { display: block; height: 100%; border-radius: 99px; animation: llenar-ancho 1.1s 0.3s var(--ease-out) both; }
+}
+
+.c1 { background: var(--chart-1); }
+.c3 { background: var(--chart-3); }
+
+.interruptor { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
+
+.tasa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  > div { display: flex; flex-direction: column; gap: 4px; }
+  strong { font-size: 30px; font-weight: 600; letter-spacing: -0.03em; }
+}
+
+.tasa-edicion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  .control { width: 110px; height: 36px; }
+}

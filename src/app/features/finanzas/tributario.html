@@ -1,0 +1,121 @@
+<div class="pila">
+  <app-page-header seccion="Finanzas" titulo="Tributario"
+    descripcion="Liquidación mensual del IGV: débito fiscal de ventas menos crédito fiscal de compras.">
+    <div class="selector-mes">
+      <button type="button" class="btn btn-icono" (click)="moverMes(-1)" aria-label="Mes anterior"><app-icon name="izquierda" [size]="17" /></button>
+      <span class="mes"><app-icon name="calendario" [size]="16" /> {{ periodo() | date: 'MMMM y' | titlecase }}</span>
+      <button type="button" class="btn btn-icono" (click)="moverMes(1)" [disabled]="esMesActual()" aria-label="Mes siguiente"><app-icon name="derecha" [size]="17" /></button>
+    </div>
+  </app-page-header>
+
+  <div class="distribucion escalonado">
+    <article class="card liquidacion papel-contable" style="--i: 0">
+      @if (resumen(); as r) {
+        <div class="resultado" [class.favor]="r.saldoAFavor > 0">
+          <span class="etiqueta">{{ r.saldoAFavor > 0 ? 'Saldo a favor del contribuyente' : 'IGV por pagar a SUNAT' }}</span>
+          <strong class="num" [appContador]="r.saldoAFavor > 0 ? r.saldoAFavor : r.igvPorPagar" formato="soles"></strong>
+          <span class="muted">Periodo {{ r.desde | date: 'd MMM' }} – {{ r.hasta | date: 'd MMM y' }}</span>
+        </div>
+
+        <div class="balanza">
+          <div class="fila">
+            <div class="fila-texto"><span><i class="c1"></i>Débito fiscal</span><small>{{ r.cantidadVentas }} ventas · base {{ soles(r.totalVentasSinIgv) }}</small></div>
+            <div class="riel"><i class="c1" [style.width.%]="balanza().debito"></i></div>
+            <strong class="num">{{ soles(r.igvVentas) }}</strong>
+          </div>
+          <div class="fila">
+            <div class="fila-texto"><span><i class="c3"></i>Crédito fiscal</span><small>{{ r.cantidadCompras }} compras · base {{ soles(r.totalComprasSinIgv) }}</small></div>
+            <div class="riel"><i class="c3" [style.width.%]="balanza().credito"></i></div>
+            <strong class="num">− {{ soles(r.igvCompras) }}</strong>
+          </div>
+          <div class="fila total">
+            <div class="fila-texto"><span>Resultado del mes</span></div>
+            <div></div>
+            <strong class="num" [class.text-success]="r.saldoAFavor > 0">{{ soles(r.igvVentas - r.igvCompras) }}</strong>
+          </div>
+        </div>
+      } @else if (cargandoResumen()) {
+        <div class="pila" style="padding: 28px">
+          <div class="skeleton" style="height: 60px; width: 60%"></div>
+          <div class="skeleton" style="height: 120px"></div>
+        </div>
+      }
+    </article>
+
+    <article class="card" style="--i: 1">
+      <header class="card-cabecera">
+        <div>
+          <h3>Simulador de IGV</h3>
+          <p>Calcula base, impuesto y total con la tasa vigente</p>
+        </div>
+        <app-icon name="calculadora" [size]="20" class="muted" />
+      </header>
+      <div class="card-cuerpo pila">
+        <div class="campo">
+          <label for="sim-monto">Monto (S/)</label>
+          <input id="sim-monto" #m type="number" min="0" step="0.01" class="control num" [value]="montoSimulado()" (input)="cambiarMonto(m.value)" />
+        </div>
+        <label class="interruptor">
+          <button type="button" class="switch" [class.on]="incluyeIgv()" (click)="alternarIncluyeIgv()" role="switch"
+            [attr.aria-checked]="incluyeIgv()" aria-label="El monto ya incluye IGV"></button>
+          El monto ya incluye IGV
+        </label>
+        @if (simulacion(); as s) {
+          <div class="desglose">
+            <div><span>Base imponible</span><span class="num" [appContador]="s.base" formato="soles" [duracion]="500"></span></div>
+            <div><span>IGV ({{ (s.tasa * 100).toFixed(0) }} %)</span><span class="num" [appContador]="s.igv" formato="soles" [duracion]="500"></span></div>
+            <div class="total"><span>Total</span><span class="num" [appContador]="s.total" formato="soles" [duracion]="500"></span></div>
+          </div>
+        }
+      </div>
+    </article>
+  </div>
+
+  <div class="distribucion escalonado">
+    <article class="card" style="--i: 2">
+      <header class="card-cabecera">
+        <div>
+          <h3>Evolución del IGV</h3>
+          <p>Débito y crédito fiscal de los últimos 6 meses</p>
+        </div>
+      </header>
+      <div class="card-cuerpo">
+        <app-grafico-barras [datos]="historial()" [series]="seriesHistorial" />
+      </div>
+    </article>
+
+    <article class="card" style="--i: 3">
+      <header class="card-cabecera">
+        <div>
+          <h3>Configuración</h3>
+          <p>Tasas tributarias vigentes</p>
+        </div>
+      </header>
+      <div class="card-cuerpo">
+        @if (tasaIgv() !== null) {
+          <div class="tasa">
+            <div>
+              <span class="muted">Impuesto General a las Ventas</span>
+              @if (editandoTasa()) {
+                <div class="tasa-edicion">
+                  <input #t type="number" min="0" max="100" step="0.01" class="control num" [value]="(tasaIgv() ?? 0) * 100" aria-label="Tasa en porcentaje" />
+                  <span>%</span>
+                  <button type="button" class="btn btn-primario btn-sm" [disabled]="guardandoTasa()" (click)="guardarTasa(t.value)">Guardar</button>
+                  <button type="button" class="btn btn-sm btn-fantasma" (click)="editandoTasa.set(false)">Cancelar</button>
+                </div>
+              } @else {
+                <strong class="num">{{ ((tasaIgv() ?? 0) * 100).toFixed(2) }} %</strong>
+              }
+            </div>
+            @if (puedeConfigurar && !editandoTasa()) {
+              <button type="button" class="btn btn-sm" (click)="editandoTasa.set(true)"><app-icon name="editar" [size]="15" /> Cambiar</button>
+            }
+          </div>
+          <p class="ayuda" style="margin-top: 14px">
+            Cada comprobante guarda la tasa con la que se emitió; cambiarla no altera las ventas ni compras ya registradas.
+          </p>
+        }
+      </div>
+    </article>
+  </div>
+</div>
