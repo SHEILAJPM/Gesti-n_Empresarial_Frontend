@@ -1,0 +1,130 @@
+<div class="pila">
+  <app-page-header seccion="Abastecimiento" titulo="Compras"
+    descripcion="Facturas recibidas de proveedores. Su IGV es tu crédito fiscal del periodo.">
+    @if (puedeEditar) {
+      <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Registrar compra</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Total de compras" [valor]="total()" formato="soles" icono="carrito" [cargando]="cargando()"
+      [detalle]="tabla.filtradas().length + ' facturas'" />
+    <app-stat-card style="--i: 1" titulo="Crédito fiscal" [valor]="creditoFiscal()" formato="soles" icono="porcentaje" tono="exito"
+      [cargando]="cargando()" detalle="IGV de compras" />
+    <app-stat-card style="--i: 2" titulo="Proveedores con compras" [valor]="proveedoresActivos()" icono="camion" tono="info"
+      [cargando]="cargando()" [detalle]="'de ' + proveedores().length + ' registrados'" />
+  </section>
+
+  <article class="card entrada">
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Comprobante o proveedor…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+      <select #p class="control" [value]="filtroProveedor()" (change)="filtroProveedor.set(p.value); tabla.pagina.set(1)" aria-label="Proveedor">
+        <option value="">Todos los proveedores</option>
+        @for (pr of proveedores(); track pr.id) { <option [value]="pr.ruc">{{ pr.razonSocial }}</option> }
+      </select>
+      <input #d type="date" class="control" style="width: auto" [value]="desde()" (change)="desde.set(d.value); tabla.pagina.set(1)" aria-label="Desde" />
+      <input #h type="date" class="control" style="width: auto" [value]="hasta()" (change)="hasta.set(h.value); tabla.pagina.set(1)" aria-label="Hasta" />
+      @if (hayFiltros() || tabla.busqueda()) {
+        <button type="button" class="btn btn-sm btn-fantasma" (click)="limpiarFiltros()"><app-icon name="cerrar" [size]="15" /> Limpiar</button>
+      }
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4, 5]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('numeroComprobante')">Factura {{ tabla.flecha('numeroComprobante') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('razonSocialProveedor')">Proveedor {{ tabla.flecha('razonSocialProveedor') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('fecha')">Fecha {{ tabla.flecha('fecha') }}</th>
+              <th class="right">Base</th>
+              <th class="right">IGV</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('montoTotal')">Total {{ tabla.flecha('montoTotal') }}</th>
+              @if (puedeEditar) { <th class="right">Acciones</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of tabla.visibles(); track c.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td><strong class="mono">{{ c.numeroComprobante }}</strong></td>
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(c.razonSocialProveedor)">{{ iniciales(c.razonSocialProveedor) }}</span>
+                    <div><strong>{{ c.razonSocialProveedor }}</strong><small class="mono">RUC {{ c.rucProveedor }}</small></div>
+                  </div>
+                </td>
+                <td class="nowrap">{{ c.fecha | date: 'd MMM y' }}</td>
+                <td class="right num">{{ soles(c.montoSinIgv) }}</td>
+                <td class="right num text-success">{{ soles(c.igv) }}</td>
+                <td class="right num"><strong>{{ soles(c.montoTotal) }}</strong></td>
+                @if (puedeEditar) {
+                  <td>
+                    <div class="acciones">
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="abrir(c)" aria-label="Editar"><app-icon name="editar" [size]="16" /></button>
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="eliminar(c)" aria-label="Eliminar"><app-icon name="eliminar" [size]="16" /></button>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="carrito" [titulo]="compras().length ? 'Sin coincidencias' : 'Aún no hay compras'"
+        [texto]="compras().length ? 'Ajusta los filtros para ver más resultados.' : 'Registra la primera factura de un proveedor.'">
+        @if (compras().length) { <button type="button" class="btn" (click)="limpiarFiltros()">Limpiar filtros</button> }
+      </app-vacio>
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Abastecimiento"
+  [titulo]="editando() ? 'Editar compra' : 'Registrar compra'" descripcion="Solo se registran facturas (serie F).">
+  <form id="form-compra" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo completo">
+      <label for="co-prov">Proveedor</label>
+      <select id="co-prov" class="control" formControlName="ruc">
+        <option value="">Selecciona un proveedor…</option>
+        @for (p of proveedores(); track p.id) { <option [value]="p.ruc">{{ p.razonSocial }} · {{ p.ruc }}</option> }
+      </select>
+      <span class="ayuda">¿Proveedor nuevo? <a routerLink="/proveedores" [queryParams]="{ nuevo: 1 }">Regístralo aquí</a></span>
+      <app-error-campo [control]="form.controls.ruc" />
+    </div>
+    <div class="campo">
+      <label for="co-num">N.° de factura</label>
+      <input id="co-num" class="control mono" formControlName="numeroComprobante" placeholder="F001-123" />
+      <app-error-campo [control]="form.controls.numeroComprobante" [mensajes]="{ pattern: 'Formato F001-123.' }" />
+    </div>
+    <div class="campo">
+      <label for="co-fecha">Fecha de emisión</label>
+      <input id="co-fecha" type="date" class="control" formControlName="fecha" [max]="hoy" />
+      <app-error-campo [control]="form.controls.fecha" />
+    </div>
+    <div class="campo completo">
+      <label for="co-monto">Monto sin IGV (S/)</label>
+      <input id="co-monto" type="number" step="0.01" min="0" class="control num" formControlName="montoSinIgv" />
+      <app-error-campo [control]="form.controls.montoSinIgv" [mensajes]="{ min: 'El monto debe ser mayor a cero.' }" />
+    </div>
+    <div class="completo desglose">
+      <div><span>Base imponible</span><span class="num">{{ soles(vistaPrevia().base) }}</span></div>
+      <div><span>IGV · crédito fiscal (18 %)</span><span class="num">{{ soles(vistaPrevia().igv) }}</span></div>
+      <div class="total"><span>Total de la factura</span><span class="num">{{ soles(vistaPrevia().total) }}</span></div>
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-compra" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> Guardar }
+    </button>
+  </ng-container>
+</app-panel>

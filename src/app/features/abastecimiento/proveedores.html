@@ -1,0 +1,103 @@
+<div class="pila">
+  <app-page-header seccion="Abastecimiento" titulo="Proveedores" descripcion="Empresas que abastecen a la organización, identificadas por su RUC.">
+    @if (puedeEditar) {
+      <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nuevo proveedor</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Proveedores" [valor]="proveedores().length" icono="camion" [cargando]="cargando()" />
+    <app-stat-card style="--i: 1" titulo="Total comprado" [valor]="totalComprado()" formato="soles" icono="carrito" tono="info"
+      [cargando]="cargando()" detalle="con IGV" />
+    <app-stat-card style="--i: 2" titulo="Proveedor principal" [valor]="principal()?.comprado ?? 0" formato="soles" icono="subida"
+      tono="exito" [cargando]="cargando()" [detalle]="principal()?.razonSocial ?? '—'" />
+  </section>
+
+  <article class="card entrada">
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar por razón social, RUC o dirección…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('razonSocial')">Proveedor {{ tabla.flecha('razonSocial') }}</th>
+              <th>Dirección</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('facturas')">Facturas {{ tabla.flecha('facturas') }}</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('comprado')">Comprado {{ tabla.flecha('comprado') }}</th>
+              @if (puedeEditar) { <th class="right">Acciones</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of tabla.visibles(); track p.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(p.razonSocial)">{{ iniciales(p.razonSocial) }}</span>
+                    <div><strong>{{ p.razonSocial }}</strong><small class="mono">RUC {{ p.ruc }}</small></div>
+                  </div>
+                </td>
+                <td class="ink-2">{{ p.direccion || '—' }}</td>
+                <td class="right num">{{ p.facturas }}</td>
+                <td class="right num"><strong>{{ soles(p.comprado) }}</strong></td>
+                @if (puedeEditar) {
+                  <td>
+                    <div class="acciones">
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="abrir(p)" aria-label="Editar"><app-icon name="editar" [size]="16" /></button>
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="eliminar(p)" aria-label="Eliminar"><app-icon name="eliminar" [size]="16" /></button>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="camion" [titulo]="proveedores().length ? 'Sin coincidencias' : 'Aún no hay proveedores'"
+        [texto]="proveedores().length ? 'Prueba con otro término.' : 'Registra a tus proveedores para cargar sus facturas de compra.'" />
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Abastecimiento"
+  [titulo]="editando() ? 'Editar proveedor' : 'Nuevo proveedor'"
+  descripcion="Próximamente: la razón social y dirección se completarán solas consultando el RUC en SUNAT.">
+  <form id="form-proveedor" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo completo">
+      <label for="p-ruc">RUC</label>
+      <div class="control-icono">
+        <app-icon name="edificio" [size]="17" />
+        <input id="p-ruc" class="control mono" formControlName="ruc" inputmode="numeric" maxlength="11" placeholder="20123456789" />
+      </div>
+      <app-error-campo [control]="form.controls.ruc" [mensajes]="{ pattern: '11 dígitos que empiezan con 10, 15, 17 o 20.' }" />
+    </div>
+    <div class="campo completo">
+      <label for="p-razon">Razón social</label>
+      <input id="p-razon" class="control" formControlName="razonSocial" placeholder="Ej. Distribuidora ACME S.A.C." />
+      <app-error-campo [control]="form.controls.razonSocial" />
+    </div>
+    <div class="campo completo">
+      <label for="p-dir">Dirección <span class="muted">(opcional)</span></label>
+      <input id="p-dir" class="control" formControlName="direccion" placeholder="Av. Arequipa 1234, Lima" />
+      <app-error-campo [control]="form.controls.direccion" />
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-proveedor" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> Guardar }
+    </button>
+  </ng-container>
+</app-panel>
