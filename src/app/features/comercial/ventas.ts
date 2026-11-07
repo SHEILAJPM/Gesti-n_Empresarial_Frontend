@@ -179,6 +179,16 @@ export class Ventas {
     this.lineas.update((l) => (l.length > 1 ? l.filter((x) => x.clave !== clave) : [nuevaLinea()]));
   }
 
+  /* Producto con stock de la línea (no aplica a servicios ni a líneas escritas a mano) */
+  protected conStock(l: LineaForm): Producto | null {
+    const p = l.productoId ? this.productos().find((x) => x.id === l.productoId) : undefined;
+    return p?.manejaStock ? p : null;
+  }
+
+  protected cantidadTexto(valor: number): string {
+    return CANTIDAD.format(valor);
+  }
+
   protected cambiarLinea(clave: number, cambios: Partial<LineaForm>): void {
     this.lineas.update((l) => l.map((x) => (x.clave === clave ? { ...x, ...cambios } : x)));
   }
@@ -221,6 +231,17 @@ export class Ventas {
     if (lineas.some((l) => !l.descripcion.trim())) lista.push('Cada línea necesita una descripción.');
     if (lineas.some((l) => !(Number(l.cantidad) > 0))) lista.push('Las cantidades deben ser mayores a cero.');
     if (lineas.some((l) => !(Number(l.valorUnitario) >= 0))) lista.push('Revisa los precios.');
+    // Mismo control que el backend: lo que se vende de cada producto no puede superar su stock
+    const pedido = new Map<number, number>();
+    for (const l of lineas) {
+      if (l.productoId) pedido.set(l.productoId, (pedido.get(l.productoId) ?? 0) + (Number(l.cantidad) || 0));
+    }
+    for (const [id, cantidad] of pedido) {
+      const p = this.productos().find((x) => x.id === id);
+      if (p?.manejaStock && cantidad > p.stock) {
+        lista.push(p.stock > 0 ? `Solo quedan ${CANTIDAD.format(p.stock)} de ${p.descripcion}.` : `${p.descripcion} no tiene stock.`);
+      }
+    }
     if (this.vistaPrevia().total <= 0) lista.push('El total debe ser mayor a cero.');
     if (this.formaPago() === 'CREDITO') {
       if (this.tipoComprobante() !== 'FACTURA') lista.push('Al crédito solo se emiten facturas (cliente con RUC).');
@@ -305,6 +326,7 @@ export class Ventas {
     }).subscribe({
       next: (venta) => {
         this.ventas.update((lista) => [venta, ...lista]);
+        this.api.productos.listar().subscribe({ next: (productos) => this.productos.set(productos), error: () => undefined });
         const tipo = venta.tipoComprobante === 'FACTURA' ? 'Factura' : 'Boleta';
         const sunat = this.etiquetaSunat(venta.sunat.estado).texto.toLowerCase();
         if (['RECHAZADO', 'ERROR', 'EXCEPCION'].includes(venta.sunat.estado)) {
@@ -440,6 +462,7 @@ interface CuotaForm {
 }
 
 let siguienteClave = 1;
+const CANTIDAD = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 3 });
 
 function nuevaLinea(): LineaForm {
   return { clave: siguienteClave++, productoId: null, codigo: null, descripcion: '', unidad: 'NIU', cantidad: 1, valorUnitario: 0 };

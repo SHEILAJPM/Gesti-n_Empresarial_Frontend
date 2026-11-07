@@ -130,6 +130,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/finanzas/pagos').then((m) => m.Pagos)
       },
       {
+        path: 'inventario',
+        title: 'Inventario · Nexo',
+        data: { permiso: 'inventario.ver' },
+        loadComponent: () => import('./features/abastecimiento/inventario').then((m) => m.Inventario)
+      },
+      {
         path: 'cobranzas',
         title: 'Cuentas por cobrar · Nexo',
         data: { permiso: 'cobranzas.ver' },

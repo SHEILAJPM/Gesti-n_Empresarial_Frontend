@@ -17,6 +17,8 @@ import { TablaEstado } from '../../shared/tabla';
 
 interface LineaNota {
   clave: number;
+  // Producto vendido: en una devolución por ítem, su stock vuelve al almacén
+  productoId: number | null;
   codigo: string | null;
   descripcion: string;
   unidad: string;
@@ -162,13 +164,16 @@ export class Notas {
     const v = this.ventaAfectada();
     if (this.tipo() === 'DEBITO') {
       const texto = this.motivos().DEBITO[codigo] ?? 'Cargo adicional';
-      this.lineas.set([{ clave: clave++, codigo: null, descripcion: texto, unidad: 'ZZ', cantidad: 1, valorUnitario: 0 }]);
+      this.lineas.set([{ clave: clave++, productoId: null, codigo: null, descripcion: texto, unidad: 'ZZ', cantidad: 1, valorUnitario: 0 }]);
     } else if (['04', '09'].includes(codigo)) {
       const texto = this.motivos().CREDITO[codigo] ?? 'Descuento';
-      this.lineas.set([{ clave: clave++, codigo: null, descripcion: texto, unidad: 'ZZ', cantidad: 1, valorUnitario: 0 }]);
+      this.lineas.set([{ clave: clave++, productoId: null, codigo: null, descripcion: texto, unidad: 'ZZ', cantidad: 1, valorUnitario: 0 }]);
     } else if (v) {
-      const items = v.items.length ? v.items : [{ codigo: null, descripcion: 'Venta de bienes y/o servicios', unidad: 'ZZ', cantidad: 1, valorUnitario: v.montoSinIgv }];
-      this.lineas.set(items.map((i) => ({ clave: clave++, codigo: i.codigo, descripcion: i.descripcion, unidad: i.unidad, cantidad: i.cantidad, valorUnitario: i.valorUnitario })));
+      const items = v.items.length ? v.items : [{ productoId: null, codigo: null, descripcion: 'Venta de bienes y/o servicios', unidad: 'ZZ', cantidad: 1, valorUnitario: v.montoSinIgv }];
+      this.lineas.set(items.map((i) => ({
+        clave: clave++, productoId: i.productoId ?? null, codigo: i.codigo, descripcion: i.descripcion, unidad: i.unidad,
+        cantidad: i.cantidad, valorUnitario: i.valorUnitario
+      })));
     }
   }
 
@@ -194,7 +199,7 @@ export class Notas {
       motivoCodigo: this.motivo(),
       sustento: this.sustento().trim(),
       items: this.esTotal() ? undefined : this.lineas().map((l) => ({
-        productoId: null, codigo: l.codigo, descripcion: l.descripcion.trim(), unidad: l.unidad,
+        productoId: l.productoId, codigo: l.codigo, descripcion: l.descripcion.trim(), unidad: l.unidad,
         cantidad: Number(l.cantidad), valorUnitario: Number(l.valorUnitario)
       }))
     }).subscribe({

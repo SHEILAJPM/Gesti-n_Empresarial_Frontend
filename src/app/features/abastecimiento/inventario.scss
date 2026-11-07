@@ -1,0 +1,120 @@
+.fila { cursor: pointer; }
+.fila:hover td { background: var(--surface-2); }
+.nowrap { white-space: nowrap; }
+@media (max-width: 700px) { .ocultar-movil { display: none; } }
+
+.stock { font-size: 15px; }
+
+/* Nivel frente al mínimo: lleno al doble del mínimo */
+.nivel {
+  display: block;
+  width: 64px;
+  height: 4px;
+  margin: 6px 0 0 auto;
+  border-radius: 4px;
+  background: var(--surface-3);
+  overflow: hidden;
+  span { display: block; height: 100%; border-radius: inherit; background: var(--success); transition: width 0.4s var(--ease-out); }
+  &.bajo span { background: var(--accent); }
+  &.sin_stock span { background: var(--danger); }
+}
+
+h4 { margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-3); }
+
+.totales {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  div { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 12px; background: var(--surface-2); }
+  span { font-size: 12px; color: var(--ink-3); }
+  strong { font-size: 17px; }
+}
+
+.acciones-kardex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  .espacio { flex: 1; }
+}
+
+.tabla.compacta td, .tabla.compacta th { padding: 8px 10px; }
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  @media (max-width: 520px) { grid-template-columns: 1fr; }
+}
+.campo-inv { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+}
+
+/* Líneas de productos (mismo estilo que el detalle de una venta) */
+.seccion-detalle { display: flex; flex-direction: column; gap: 10px; }
+.seccion-titulo { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.linea {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.linea-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  select { flex: 1; min-width: 0; }
+}
+.linea-num {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+.linea-datos {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: end;
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+  @media (max-width: 520px) { grid-template-columns: 1fr 1fr; }
+}
+/* Misma altura que un campo (etiqueta + control de 40px) para que todo quede alineado */
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  span { font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+  strong { display: flex; align-items: center; height: 40px; font-size: 14px; }
+}
+
+.problemas {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+}

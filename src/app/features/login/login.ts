@@ -62,7 +62,8 @@ export class Login {
     const { usuario, clave } = this.form.getRawValue();
     try {
       await this.auth.iniciarSesion(usuario.trim(), clave);
-      await this.router.navigateByUrl('/panel');
+      // La raíz decide el inicio según el rol (panel, inventario, ventas o asistencia)
+      await this.router.navigateByUrl('/');
     } catch (e) {
       const credenciales = e instanceof HttpErrorResponse && e.status === 401;
       this.error.set(credenciales ? 'Usuario o contraseña incorrectos.' : mensajeDeError(e));

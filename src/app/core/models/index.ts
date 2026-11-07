@@ -239,7 +239,7 @@ export interface VentaCuota {
   monto: number;
 }
 
-/* Producto o servicio del catálogo; valorUnitario es SIN IGV */
+/* Producto o servicio del catálogo; valorUnitario es SIN IGV. Los servicios (ZZ, HUR) no manejan stock. */
 export interface Producto {
   id: number;
   codigo: string;
@@ -247,9 +247,80 @@ export interface Producto {
   unidad: string;
   valorUnitario: number;
   activo: boolean;
+  manejaStock: boolean;
+  stock: number;
+  stockMinimo: number;
 }
 
-export type ProductoRequest = Omit<Producto, 'id' | 'activo'>;
+/* El stock no se edita en el catálogo: cambia con los movimientos de Inventario y con las ventas */
+export type ProductoRequest = Omit<Producto, 'id' | 'activo' | 'manejaStock' | 'stock'>;
+
+// ---------- Inventario ----------
+
+export type EstadoStock = 'SIN_STOCK' | 'BAJO' | 'NORMAL';
+export type TipoMovimiento = 'ENTRADA' | 'SALIDA';
+export type OperacionInventario = 'ENTRADA' | 'SALIDA' | 'AJUSTE';
+export type MotivoMovimiento = 'SALDO_INICIAL' | 'COMPRA' | 'DEVOLUCION_CLIENTE' | 'ANULACION_VENTA' | 'VENTA'
+  | 'DEVOLUCION_PROVEEDOR' | 'MERMA' | 'CONSUMO_INTERNO' | 'AJUSTE' | 'OTRO';
+
+export interface ProductoStock {
+  id: number;
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  activo: boolean;
+  stock: number;
+  stockMinimo: number;
+  estado: EstadoStock;
+  ultimoMovimiento: string | null;
+}
+
+export interface MovimientoStock {
+  id: number;
+  fecha: string;
+  tipo: TipoMovimiento;
+  motivo: MotivoMovimiento;
+  motivoTexto: string;
+  cantidad: number;
+  saldo: number;
+  referencia: string | null;
+  observacion: string | null;
+  registradoPor: string | null;
+  ventaId: number | null;
+  compraId: number | null;
+  productoId: number;
+  producto: string;
+}
+
+export interface Kardex {
+  producto: ProductoStock;
+  entradas: number;
+  salidas: number;
+  movimientos: MovimientoStock[];
+}
+
+/* En un AJUSTE, cantidad es el conteo físico: se registra la diferencia con el sistema */
+export interface MovimientoRequest {
+  operacion: OperacionInventario;
+  motivo?: MotivoMovimiento | null;
+  compraId?: number | null;
+  referencia?: string | null;
+  observacion?: string | null;
+  lineas: { productoId: number; cantidad: number }[];
+}
+
+export interface CompraParaIngreso {
+  id: number;
+  numeroComprobante: string;
+  proveedor: string;
+  fecha: string;
+  ingresada: boolean;
+}
+
+export interface MotivosInventario {
+  entrada: Partial<Record<MotivoMovimiento, string>>;
+  salida: Partial<Record<MotivoMovimiento, string>>;
+}
 
 export type EstadoSunat = 'NO_ENVIADO' | 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO' | 'EXCEPCION' | 'ERROR';
 
@@ -455,7 +526,8 @@ export interface NotaRequest {
   motivoCodigo: string;
   sustento: string;
   fecha?: string;
-  items?: { productoId: null; codigo: string | null; descripcion: string; unidad: string; cantidad: number; valorUnitario: number }[];
+  // productoId: el producto vendido; en una devolución por ítem su stock vuelve al almacén
+  items?: { productoId: number | null; codigo: string | null; descripcion: string; unidad: string; cantidad: number; valorUnitario: number }[];
 }
 
 export type MotivosNota = Record<TipoNota, Record<string, string>>;

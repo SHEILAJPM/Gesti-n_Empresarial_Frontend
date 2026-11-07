@@ -242,13 +242,19 @@
               aria-label="Producto del catálogo">
               <option value="">— Escribir a mano —</option>
               @for (p of productosActivos(); track p.id) {
-                <option [value]="p.id">{{ p.codigo }} · {{ p.descripcion }}</option>
+                <option [value]="p.id">{{ p.codigo }} · {{ p.descripcion }}{{ p.manejaStock ? ' (stock ' + cantidadTexto(p.stock) + ')' : '' }}</option>
               }
             </select>
             <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="quitarLinea(l.clave)" aria-label="Quitar línea">
               <app-icon name="eliminar" [size]="16" />
             </button>
           </div>
+          @if (conStock(l); as ps) {
+            <span class="stock-linea" [class.text-danger]="l.cantidad > ps.stock">
+              Stock disponible: <strong class="num">{{ cantidadTexto(ps.stock) }}</strong>
+              @if (l.cantidad > ps.stock) { · no alcanza para {{ cantidadTexto(l.cantidad) }} }
+            </span>
+          }
           <input class="control" placeholder="Descripción que saldrá en el comprobante" maxlength="250" [value]="l.descripcion"
             (input)="cambiarLinea(l.clave, { descripcion: $any($event.target).value })" aria-label="Descripción" />
           <div class="linea-numeros">

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
@@ -14,10 +15,12 @@ import { Panel } from '../../shared/panel';
 import { StatCard } from '../../shared/stat-card';
 import { TablaEstado } from '../../shared/tabla';
 
+const CANTIDAD = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 3 });
+
 /* Catálogo de productos y servicios que se facturan. Al emitir una venta se eligen de aquí. */
 @Component({
   selector: 'app-productos',
-  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo],
+  imports: [ReactiveFormsModule, RouterLink, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="pila">
@@ -59,6 +62,7 @@ import { TablaEstado } from '../../shared/tabla';
                   <th class="ordenable" (click)="tabla.ordenarPor('codigo')">Código {{ tabla.flecha('codigo') }}</th>
                   <th class="ordenable" (click)="tabla.ordenarPor('descripcion')">Descripción {{ tabla.flecha('descripcion') }}</th>
                   <th>Unidad</th>
+                  <th class="right">Stock</th>
                   <th class="right ordenable" (click)="tabla.ordenarPor('valorUnitario')">Precio sin IGV {{ tabla.flecha('valorUnitario') }}</th>
                   <th class="right">Con IGV</th>
                   @if (puedeEditar) { <th class="right">Acciones</th> }
@@ -69,7 +73,16 @@ import { TablaEstado } from '../../shared/tabla';
                   <tr [style.--i]="i" [class.inactivo]="!p.activo">
                     <td class="mono">{{ p.codigo }}</td>
                     <td><strong>{{ p.descripcion }}</strong> @if (!p.activo) { <span class="badge">Desactivado</span> }</td>
-                    <td><span class="badge" [class.badge-info]="p.unidad === 'ZZ'">{{ unidades()[p.unidad] ?? p.unidad }}</span></td>
+                    <td><span class="badge" [class.badge-info]="!p.manejaStock">{{ unidades()[p.unidad] ?? p.unidad }}</span></td>
+                    <td class="right num">
+                      @if (p.manejaStock) {
+                        <strong [class.text-danger]="p.stock <= 0" [class.text-alerta]="p.stock > 0 && p.stock <= p.stockMinimo">{{ cantidad(p.stock) }}</strong>
+                        @if (p.stock <= 0) { <small class="text-danger" style="display: block">Sin stock</small> }
+                        @else if (p.stock <= p.stockMinimo) { <small class="text-alerta" style="display: block">Stock bajo</small> }
+                      } @else {
+                        <span class="muted" title="Los servicios no manejan stock">—</span>
+                      }
+                    </td>
                     <td class="right num">{{ soles(p.valorUnitario) }}</td>
                     <td class="right num"><strong>{{ soles(conIgv(p.valorUnitario)) }}</strong></td>
                     @if (puedeEditar) {
@@ -126,6 +139,20 @@ import { TablaEstado } from '../../shared/tabla';
             (change)="desdeConIgv(con.value)" />
           <span class="ayuda">Si escribes el precio final, se calcula el valor sin IGV.</span>
         </div>
+        @if (!esServicio()) {
+          <div class="campo completo">
+            <label for="p-minimo">Stock mínimo</label>
+            <input id="p-minimo" type="number" step="any" min="0" class="control num" formControlName="stockMinimo" />
+            <span class="ayuda">
+              Se marca «stock bajo» al llegar a esta cantidad (0 = sin alerta).
+              @if (editando()?.manejaStock) { Stock actual: <strong>{{ cantidad(editando()!.stock) }}</strong>. }
+              El stock se mueve en <a routerLink="/inventario">Inventario</a> y con las ventas.
+            </span>
+            <app-error-campo [control]="form.controls.stockMinimo" />
+          </div>
+        } @else {
+          <p class="ayuda completo">Los servicios no manejan stock: se facturan sin pasar por el almacén.</p>
+        }
       </form>
       <ng-container ngProjectAs="[pie]">
         <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
@@ -151,7 +178,7 @@ export class Productos {
   protected readonly verInactivos = signal(false);
 
   protected readonly activos = computed(() => this.productos().filter((p) => p.activo).length);
-  protected readonly servicios = computed(() => this.productos().filter((p) => p.activo && p.unidad === 'ZZ').length);
+  protected readonly servicios = computed(() => this.productos().filter((p) => p.activo && !p.manejaStock).length);
   protected readonly promedio = computed(() => {
     const lista = this.productos().filter((p) => p.activo);
     return lista.length ? this.conIgv(lista.reduce((s, p) => s + p.valorUnitario, 0) / lista.length) : 0;
@@ -170,13 +197,18 @@ export class Productos {
     codigo: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9._-]{1,30}$/)]],
     descripcion: ['', [Validators.required, Validators.maxLength(250)]],
     unidad: ['NIU', Validators.required],
-    valorUnitario: [0, [Validators.required, Validators.min(0)]]
+    valorUnitario: [0, [Validators.required, Validators.min(0)]],
+    stockMinimo: [0, [Validators.min(0)]]
   });
+  // Los servicios (ZZ, HUR) no manejan stock
+  private readonly unidadActual = signal('NIU');
+  protected readonly esServicio = computed(() => ['ZZ', 'HUR'].includes(this.unidadActual()));
   private readonly valorActual = signal(0);
   protected readonly precioConIgv = computed(() => this.conIgv(this.valorActual()).toFixed(2));
 
   constructor() {
     this.form.controls.valorUnitario.valueChanges.subscribe((v) => this.valorActual.set(Number(v) || 0));
+    this.form.controls.unidad.valueChanges.subscribe((u) => this.unidadActual.set(u));
     forkJoin({ productos: this.api.productos.listar(), unidades: this.api.productos.unidades() }).subscribe({
       next: ({ productos, unidades }) => {
         this.productos.set(productos);
@@ -188,6 +220,10 @@ export class Productos {
         this.cargando.set(false);
       }
     });
+  }
+
+  protected cantidad(valor: number): string {
+    return CANTIDAD.format(valor);
   }
 
   protected conIgv(valor: number): number {
@@ -204,9 +240,10 @@ export class Productos {
   protected abrir(p?: Producto): void {
     this.editando.set(p ?? null);
     this.form.reset(p
-      ? { codigo: p.codigo, descripcion: p.descripcion, unidad: p.unidad, valorUnitario: p.valorUnitario }
-      : { codigo: '', descripcion: '', unidad: 'NIU', valorUnitario: 0 });
+      ? { codigo: p.codigo, descripcion: p.descripcion, unidad: p.unidad, valorUnitario: p.valorUnitario, stockMinimo: p.stockMinimo }
+      : { codigo: '', descripcion: '', unidad: 'NIU', valorUnitario: 0, stockMinimo: 0 });
     this.valorActual.set(p?.valorUnitario ?? 0);
+    this.unidadActual.set(p?.unidad ?? 'NIU');
     this.panelAbierto.set(true);
   }
 
@@ -215,7 +252,8 @@ export class Productos {
       this.form.markAllAsTouched();
       return;
     }
-    const datos = { ...this.form.getRawValue(), valorUnitario: Number(this.form.getRawValue().valorUnitario) };
+    const crudo = this.form.getRawValue();
+    const datos = { ...crudo, valorUnitario: Number(crudo.valorUnitario), stockMinimo: this.esServicio() ? 0 : Number(crudo.stockMinimo) || 0 };
     const actual = this.editando();
     this.guardando.set(true);
     (actual ? this.api.productos.actualizar(actual.id, datos) : this.api.productos.crear(datos)).subscribe({

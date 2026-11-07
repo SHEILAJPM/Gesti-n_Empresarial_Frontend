@@ -6,7 +6,8 @@ import {
   CeseRequest, Cliente, ClienteRequest, DocumentoConsultado, EstadoFacturacion, IntentoMarcacion, MiBoleta, MiPerfil, Sede, TipoComprobante, Compra, CompraRequest, ConfiguracionTributaria, Documento, DocumentoRequest,
   Marcacion, MarcarRequest, Pago, PagoRequest, Planilla, Proveedor, ProveedorRequest, ResumenAsistencia, ResumenTributario, Simulacion,
   Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest, Producto, ProductoRequest,
-  MotivosNota, Nota, NotaRequest, Guia, GuiaRequest, CuentaPorCobrar, EstadoDeCuenta, MedioPago, ResumenCobranza
+  MotivosNota, Nota, NotaRequest, Guia, GuiaRequest, CuentaPorCobrar, EstadoDeCuenta, MedioPago, ResumenCobranza,
+  CompraParaIngreso, Kardex, MotivosInventario, MovimientoRequest, MovimientoStock, ProductoStock
 } from '../models';
 import type { RespuestaLogin } from '../auth/auth.service';
 
@@ -73,6 +74,14 @@ export class ApiService {
     estadoDeCuenta: (ventaId: number) => this.get<EstadoDeCuenta>(`/api/cobranzas/venta/${ventaId}`),
     registrar: (datos: { ventaId: number; monto: number; fecha?: string; medio: MedioPago; referencia?: string | null }) =>
       this.post<EstadoDeCuenta>('/api/cobranzas', datos)
+  };
+
+  readonly inventario = {
+    listar: () => this.get<ProductoStock[]>('/api/inventario'),
+    kardex: (productoId: number) => this.get<Kardex>(`/api/inventario/${productoId}/kardex`),
+    motivos: () => this.get<MotivosInventario>('/api/inventario/motivos'),
+    compras: () => this.get<CompraParaIngreso[]>('/api/inventario/compras'),
+    registrar: (datos: MovimientoRequest) => this.post<MovimientoStock[]>('/api/inventario/movimientos', datos)
   };
 
   readonly guias = {

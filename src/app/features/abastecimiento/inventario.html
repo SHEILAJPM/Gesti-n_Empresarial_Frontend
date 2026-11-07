@@ -1,0 +1,262 @@
+<div class="pila">
+  <app-page-header seccion="Abastecimiento" titulo="Inventario"
+    descripcion="Stock de cada producto y su kárdex. Las ventas lo descuentan solas; los ingresos, salidas y conteos se registran aquí.">
+    @if (puedeMover) {
+      <button type="button" class="btn" (click)="abrirMovimiento('AJUSTE')"><app-icon name="calculadora" [size]="16" /> Conteo físico</button>
+      <button type="button" class="btn" (click)="abrirMovimiento('SALIDA')"><app-icon name="subida" [size]="16" /> Salida</button>
+      <button type="button" class="btn btn-primario" (click)="abrirMovimiento('ENTRADA')"><app-icon name="bajada" [size]="16" /> Ingreso</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Productos con stock" [valor]="conStock()" icono="edificio" [cargando]="cargando()"
+      [detalle]="'de ' + productos().length + ' productos controlados'" />
+    <app-stat-card style="--i: 1" titulo="Stock bajo" [valor]="bajos()" icono="alerta" tono="alerta" [cargando]="cargando()"
+      detalle="En el mínimo o por debajo" />
+    <app-stat-card style="--i: 2" titulo="Sin stock" [valor]="sinStock()" icono="anular" tono="peligro" [cargando]="cargando()"
+      detalle="No se pueden vender" />
+  </section>
+
+  <article class="card entrada">
+    <nav class="pestanas" aria-label="Filtro de productos">
+      <button type="button" [class.activa]="filtro() === 'todos'" (click)="filtro.set('todos'); tabla.pagina.set(1)">Todos</button>
+      <button type="button" [class.activa]="filtro() === 'bajo'" (click)="filtro.set('bajo'); tabla.pagina.set(1)">
+        Stock bajo <span class="contador num">{{ bajos() }}</span>
+      </button>
+      <button type="button" [class.activa]="filtro() === 'sin'" (click)="filtro.set('sin'); tabla.pagina.set(1)">
+        Sin stock <span class="contador num">{{ sinStock() }}</span>
+      </button>
+    </nav>
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar por código o descripción…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">@for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 44px"></div> }</div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('codigo')">Código {{ tabla.flecha('codigo') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('descripcion')">Descripción {{ tabla.flecha('descripcion') }}</th>
+              <th class="right ordenable" (click)="tabla.ordenarPor('stock')">Stock {{ tabla.flecha('stock') }}</th>
+              <th class="right ocultar-movil">Mínimo</th>
+              <th>Estado</th>
+              <th class="ocultar-movil">Último movimiento</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of tabla.visibles(); track p.id; let i = $index) {
+              <tr [style.--i]="i" class="fila" (click)="abrirKardex(p.id)">
+                <td class="mono">{{ p.codigo }}</td>
+                <td><strong>{{ p.descripcion }}</strong> @if (!p.activo) { <span class="badge">Desactivado</span> }</td>
+                <td class="right">
+                  <strong class="num stock">{{ cantidad(p.stock) }}</strong>
+                  <small class="muted" style="display: block">{{ nombreUnidad(p.unidad) }}</small>
+                  @if (p.stockMinimo > 0) {
+                    <span [class]="'nivel ' + p.estado.toLowerCase()"><span [style.width.%]="nivel(p)"></span></span>
+                  }
+                </td>
+                <td class="right num ocultar-movil">{{ p.stockMinimo > 0 ? cantidad(p.stockMinimo) : '—' }}</td>
+                <td>
+                  @let e = etiqueta(p.estado);
+                  <span class="badge punto" [class]="e.clase">{{ e.texto }}</span>
+                </td>
+                <td class="ocultar-movil">
+                  @if (p.ultimoMovimiento) { {{ p.ultimoMovimiento | date: 'd MMM y, HH:mm' }} } @else { <span class="muted">Sin movimientos</span> }
+                </td>
+                <td class="right">
+                  <div class="acciones" style="opacity: 1; justify-content: flex-end">
+                    @if (puedeMover) {
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="$event.stopPropagation(); abrirMovimiento('ENTRADA', p)"
+                        [attr.aria-label]="'Ingresar stock de ' + p.descripcion" title="Registrar ingreso"><app-icon name="mas" [size]="16" /></button>
+                    }
+                    <app-icon name="derecha" [size]="16" />
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="edificio" [titulo]="productos().length ? 'Nada en esta vista' : 'Aún no hay productos con stock'"
+        [texto]="productos().length ? 'Prueba con otro filtro o término.' : 'Registra tus productos en el catálogo (los servicios no manejan stock) y luego su inventario inicial.'" />
+    }
+  </article>
+</div>
+
+<!-- Kárdex del producto -->
+<app-panel [abierto]="!!kardex() || cargandoKardex()" (cerrar)="cerrarKardex()" etiqueta="Kárdex" [ancho]="760"
+  [titulo]="kardex()?.producto?.descripcion ?? 'Cargando…'"
+  [descripcion]="kardex() ? kardex()!.producto.codigo + ' · se controla en ' + nombreUnidad(kardex()!.producto.unidad) : ''">
+  @if (kardex(); as k) {
+    <div class="pila" style="gap: 18px">
+      <div class="totales">
+        <div><span>Stock actual</span><strong class="num">{{ cantidad(k.producto.stock) }}</strong></div>
+        <div><span>Entradas</span><strong class="num text-success">+{{ cantidad(k.entradas) }}</strong></div>
+        <div><span>Salidas</span><strong class="num text-danger">−{{ cantidad(k.salidas) }}</strong></div>
+      </div>
+      <div class="acciones-kardex">
+        @let e = etiqueta(k.producto.estado);
+        <span class="badge punto" [class]="e.clase">{{ e.texto }}</span>
+        @if (k.producto.stockMinimo > 0) { <span class="ayuda">Mínimo: {{ cantidad(k.producto.stockMinimo) }}</span> }
+        <span class="espacio"></span>
+        @if (k.movimientos.length) {
+          <button type="button" class="btn btn-sm" (click)="descargarKardex()"><app-icon name="bajada" [size]="15" /> CSV</button>
+        }
+        @if (puedeMover) {
+          <button type="button" class="btn btn-sm" (click)="abrirMovimiento('AJUSTE', k.producto)">Conteo</button>
+          <button type="button" class="btn btn-sm" (click)="abrirMovimiento('SALIDA', k.producto)">Salida</button>
+          <button type="button" class="btn btn-sm btn-primario" (click)="abrirMovimiento('ENTRADA', k.producto)">Ingreso</button>
+        }
+      </div>
+
+      @if (k.movimientos.length) {
+        <div class="tabla-contenedor">
+          <table class="tabla compacta">
+            <thead>
+              <tr><th>Fecha</th><th>Movimiento</th><th class="right">Entrada</th><th class="right">Salida</th><th class="right">Saldo</th></tr>
+            </thead>
+            <tbody>
+              @for (m of k.movimientos; track m.id) {
+                <tr>
+                  <td class="nowrap">{{ m.fecha | date: 'd MMM y' }}<small class="muted" style="display: block">{{ m.fecha | date: 'HH:mm' }}</small></td>
+                  <td>
+                    <strong>{{ m.motivoTexto }}</strong>
+                    @if (m.referencia) { <small class="mono" style="display: block">{{ m.referencia }}</small> }
+                    @if (m.observacion) { <small class="muted" style="display: block">{{ m.observacion }}</small> }
+                    @if (m.registradoPor) { <small class="muted" style="display: block">por {{ m.registradoPor }}</small> }
+                  </td>
+                  <td class="right num text-success">{{ m.tipo === 'ENTRADA' ? cantidad(m.cantidad) : '' }}</td>
+                  <td class="right num text-danger">{{ m.tipo === 'SALIDA' ? cantidad(m.cantidad) : '' }}</td>
+                  <td class="right num"><strong>{{ cantidad(m.saldo) }}</strong></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (k.movimientos.length >= 500) { <p class="ayuda">Se muestran los 500 movimientos más recientes.</p> }
+      } @else {
+        <p class="muted">Este producto aún no tiene movimientos. Registra su inventario inicial con un ingreso.</p>
+      }
+    </div>
+  } @else {
+    <div class="pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 50px"></div> }</div>
+  }
+</app-panel>
+
+<!-- Ingreso, salida o conteo -->
+<app-panel [abierto]="panelMovimiento()" (cerrar)="cerrarMovimiento()" etiqueta="Inventario" [ancho]="640"
+  [titulo]="operacion() === 'ENTRADA' ? 'Registrar ingreso' : operacion() === 'SALIDA' ? 'Registrar salida' : 'Conteo físico'"
+  [descripcion]="operacion() === 'AJUSTE' ? 'Escribe lo que contaste: solo se registra la diferencia con el sistema.'
+    : operacion() === 'ENTRADA' ? 'Mercadería que llega al almacén.' : 'Mercadería que sale sin venderse (las ventas descuentan solas).'">
+  <div class="pila" style="gap: 16px">
+    <div class="segmentado" role="tablist" aria-label="Tipo de movimiento">
+      <span class="indicador" [style.width]="'calc(33.333% - 2.7px)'"
+        [style.transform]="operacion() === 'SALIDA' ? 'translateX(100%)' : operacion() === 'AJUSTE' ? 'translateX(200%)' : 'none'"></span>
+      <button type="button" [class.activo]="operacion() === 'ENTRADA'" (click)="cambiarOperacion('ENTRADA')">Ingreso</button>
+      <button type="button" [class.activo]="operacion() === 'SALIDA'" (click)="cambiarOperacion('SALIDA')">Salida</button>
+      <button type="button" [class.activo]="operacion() === 'AJUSTE'" (click)="cambiarOperacion('AJUSTE')">Conteo</button>
+    </div>
+
+    @if (operacion() !== 'AJUSTE') {
+      <div class="rejilla">
+        <label class="campo-inv">Motivo
+          <select class="control" (change)="elegirMotivo($any($event.target).value)">
+            @for (m of listaMotivos(); track m.codigo) { <option [value]="m.codigo" [selected]="m.codigo === motivo()">{{ m.texto }}</option> }
+          </select>
+        </label>
+        @if (operacion() === 'ENTRADA' && motivo() === 'COMPRA') {
+          <label class="campo-inv">Compra
+            <select class="control" (change)="elegirCompra($any($event.target).value)">
+              <option value="" [selected]="!compraId()">— Sin compra registrada —</option>
+              @for (c of compras(); track c.id) {
+                <option [value]="c.id" [selected]="c.id === compraId()">{{ c.numeroComprobante }} · {{ c.proveedor }}{{ c.ingresada ? ' (ya ingresada)' : '' }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+      @if (compraElegida()?.ingresada) {
+        <p class="aviso"><app-icon name="alerta" [size]="15" /> Esta compra ya tiene un ingreso registrado. Continúa solo si llegó otra parte del pedido.</p>
+      }
+    }
+
+    <div class="rejilla">
+      <label class="campo-inv"><span>Referencia <span class="muted">{{ operacion() === 'ENTRADA' && motivo() === 'COMPRA' && !compraId() ? '' : '(opcional)' }}</span></span>
+        <input class="control mono" maxlength="80" [value]="referencia()" (input)="referencia.set($any($event.target).value)"
+          [placeholder]="operacion() === 'ENTRADA' && motivo() === 'COMPRA' ? 'Guía o factura del proveedor' : 'Documento de respaldo'" />
+      </label>
+      <label class="campo-inv"><span>Observación <span class="muted">{{ motivo() === 'OTRO' && operacion() !== 'AJUSTE' ? '' : '(opcional)' }}</span></span>
+        <input class="control" maxlength="200" [value]="observacion()" (input)="observacion.set($any($event.target).value)"
+          [placeholder]="operacion() === 'AJUSTE' ? 'Ej. inventario de fin de mes' : 'Detalle para el kárdex'" />
+      </label>
+    </div>
+
+    <div class="seccion-detalle">
+      <div class="seccion-titulo">
+        <strong>Productos</strong>
+        @if (operacion() === 'AJUSTE') {
+          <button type="button" class="btn btn-sm btn-fantasma" (click)="contarTodo()">Contar todos los productos</button>
+        }
+      </div>
+      @for (l of lineas(); track l.clave; let n = $index) {
+        @let p = producto(l.productoId);
+        <div class="linea">
+          <div class="linea-cabecera">
+            <span class="linea-num">{{ n + 1 }}</span>
+            <select class="control" (change)="elegirProducto(l.clave, $any($event.target).value)" aria-label="Producto">
+              <option value="" [selected]="!l.productoId">— Elige el producto —</option>
+              @for (o of opcionesProducto(); track o.id) {
+                <option [value]="o.id" [selected]="o.id === l.productoId">{{ o.codigo }} · {{ o.descripcion }}</option>
+              }
+            </select>
+            <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="quitarLinea(l.clave)" aria-label="Quitar línea">
+              <app-icon name="eliminar" [size]="16" />
+            </button>
+          </div>
+          <div class="linea-datos">
+            <label>{{ operacion() === 'AJUSTE' ? 'Conteo físico' : 'Cantidad' }}
+              <input type="number" class="control num" min="0" step="any" [value]="l.cantidad ?? ''"
+                (input)="cambiarCantidad(l.clave, $any($event.target).value)" />
+            </label>
+            <div class="dato"><span>En sistema</span><strong class="num">{{ p ? cantidad(p.stock) : '—' }}</strong></div>
+            @if (operacion() === 'AJUSTE') {
+              @let d = diferencia(l);
+              <div class="dato"><span>Diferencia</span>
+                <strong class="num" [class.text-success]="(d ?? 0) > 0" [class.text-danger]="(d ?? 0) < 0">
+                  {{ d === null ? '—' : d === 0 ? 'Coincide' : (d > 0 ? '+' : '−') + cantidad(d > 0 ? d : -d) }}
+                </strong>
+              </div>
+            } @else {
+              @let r = resultado(l);
+              <div class="dato"><span>Quedará</span>
+                <strong class="num" [class.text-danger]="r !== null && r < 0">{{ r === null ? '—' : cantidad(r) }}</strong>
+              </div>
+            }
+            <div class="dato"><span>Unidad</span><strong>{{ p ? nombreUnidad(p.unidad) : '—' }}</strong></div>
+          </div>
+        </div>
+      }
+      <button type="button" class="btn btn-sm" (click)="agregarLinea()"><app-icon name="mas" [size]="15" /> Agregar producto</button>
+    </div>
+
+    @if (problemas().length && lineas().length) {
+      <ul class="problemas">@for (x of problemas(); track x) { <li>{{ x }}</li> }</ul>
+    }
+  </div>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="cerrarMovimiento()">Cancelar</button>
+    <button type="button" class="btn btn-primario" [disabled]="guardando() || problemas().length > 0" (click)="registrar()">
+      @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> Registrar }
+    </button>
+  </ng-container>
+</app-panel>

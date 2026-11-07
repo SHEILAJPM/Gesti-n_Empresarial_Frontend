@@ -24,6 +24,10 @@ export const PERMISOS = {
   'guias.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD', 'ALMACEN', 'VENDEDOR'],
   'guias.emitir': ['ADMIN', 'ADMINISTRACION', 'ALMACEN', 'VENDEDOR'],
 
+  // Almacén mueve el stock (ingresos, salidas, conteos); quien vende o revisa lo consulta
+  'inventario.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD', 'ALMACEN', 'VENDEDOR'],
+  'inventario.mover': ['ADMIN', 'ADMINISTRACION', 'ALMACEN'],
+
   'compras.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],
   'compras.editar': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],
   'proveedores.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],
