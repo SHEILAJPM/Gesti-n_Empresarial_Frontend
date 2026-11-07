@@ -57,6 +57,7 @@ export const MENU: GrupoMenu[] = [
   {
     titulo: 'Finanzas',
     items: [
+      { ruta: '/cobranzas', titulo: 'Cuentas por cobrar', icono: 'bajada', permiso: 'cobranzas.ver' },
       { ruta: '/pagos', titulo: 'Pagos', icono: 'billetera', permiso: 'pagos.ver' },
       { ruta: '/tributario', titulo: 'Tributario', icono: 'banco', permiso: 'tributario.ver' }
     ]

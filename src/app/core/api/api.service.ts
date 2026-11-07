@@ -6,7 +6,7 @@ import {
   CeseRequest, Cliente, ClienteRequest, DocumentoConsultado, EstadoFacturacion, IntentoMarcacion, MiBoleta, MiPerfil, Sede, TipoComprobante, Compra, CompraRequest, ConfiguracionTributaria, Documento, DocumentoRequest,
   Marcacion, MarcarRequest, Pago, PagoRequest, Planilla, Proveedor, ProveedorRequest, ResumenAsistencia, ResumenTributario, Simulacion,
   Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest, Producto, ProductoRequest,
-  MotivosNota, Nota, NotaRequest, Guia, GuiaRequest
+  MotivosNota, Nota, NotaRequest, Guia, GuiaRequest, CuentaPorCobrar, EstadoDeCuenta, MedioPago, ResumenCobranza
 } from '../models';
 import type { RespuestaLogin } from '../auth/auth.service';
 
@@ -65,6 +65,14 @@ export class ApiService {
     emitir: (datos: NotaRequest) => this.post<Nota>('/api/notas', datos),
     consultarSunat: (id: number) => this.get<Nota>(`/api/notas/${id}/sunat`),
     reenviarSunat: (id: number) => this.post<Nota>(`/api/notas/${id}/sunat/reenviar`, null)
+  };
+
+  readonly cobranzas = {
+    listar: (todas = false) => this.get<CuentaPorCobrar[]>('/api/cobranzas', { todas }),
+    resumen: () => this.get<ResumenCobranza>('/api/cobranzas/resumen'),
+    estadoDeCuenta: (ventaId: number) => this.get<EstadoDeCuenta>(`/api/cobranzas/venta/${ventaId}`),
+    registrar: (datos: { ventaId: number; monto: number; fecha?: string; medio: MedioPago; referencia?: string | null }) =>
+      this.post<EstadoDeCuenta>('/api/cobranzas', datos)
   };
 
   readonly guias = {

@@ -30,6 +30,8 @@ export const PERMISOS = {
   'proveedores.editar': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],
 
   'pagos.ver': ['ADMIN', 'CONTABILIDAD'],
+  'cobranzas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
+  'cobranzas.registrar': ['ADMIN', 'CONTABILIDAD'],
   'planillas.ver': ['ADMIN', 'RRHH', 'CONTABILIDAD'],
   'planillas.generar': ['ADMIN', 'RRHH'],
   'planillas.aprobar': ['ADMIN', 'CONTABILIDAD'],

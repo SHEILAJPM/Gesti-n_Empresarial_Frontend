@@ -130,6 +130,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/finanzas/pagos').then((m) => m.Pagos)
       },
       {
+        path: 'cobranzas',
+        title: 'Cuentas por cobrar · Nexo',
+        data: { permiso: 'cobranzas.ver' },
+        loadComponent: () => import('./features/finanzas/cobranzas').then((m) => m.Cobranzas)
+      },
+      {
         path: 'tributario',
         title: 'Tributario · Nexo',
         data: { permiso: 'tributario.ver' },

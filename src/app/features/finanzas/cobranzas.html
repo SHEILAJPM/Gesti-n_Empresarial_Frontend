@@ -1,0 +1,171 @@
+<div class="pila">
+  <app-page-header seccion="Finanzas" titulo="Cuentas por cobrar"
+    descripcion="Lo que deben los clientes por las ventas al crédito. Los cobros se aplican a la cuota más antigua." />
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Por cobrar" [valor]="resumen()?.porCobrar ?? 0" formato="soles" icono="billetera"
+      [cargando]="cargando()" [detalle]="(resumen()?.facturasPendientes ?? 0) + ' facturas con saldo'" />
+    <app-stat-card style="--i: 1" titulo="Vencido" [valor]="resumen()?.vencido ?? 0" formato="soles" icono="alerta" tono="alerta"
+      [cargando]="cargando()" [detalle]="(resumen()?.facturasVencidas ?? 0) + ' facturas vencidas'" />
+    <app-stat-card style="--i: 2" titulo="Cobrado este mes" [valor]="resumen()?.cobradoEsteMes ?? 0" formato="soles" icono="subida"
+      tono="exito" [cargando]="cargando()" />
+  </section>
+
+  <div class="distribucion">
+    <article class="card entrada">
+      <nav class="pestanas" aria-label="Filtro de cuentas">
+        <button type="button" [class.activa]="filtro() === 'pendientes'" (click)="filtro.set('pendientes'); tabla.pagina.set(1)">Con saldo</button>
+        <button type="button" [class.activa]="filtro() === 'vencidas'" (click)="filtro.set('vencidas'); tabla.pagina.set(1)">
+          Vencidas <span class="contador num">{{ resumen()?.facturasVencidas ?? 0 }}</span>
+        </button>
+        <button type="button" [class.activa]="filtro() === 'todas'" (click)="filtro.set('todas'); tabla.pagina.set(1)">Todas</button>
+      </nav>
+      <div class="filtros">
+        <div class="control-icono busqueda">
+          <app-icon name="buscar" [size]="16" />
+          <input #b class="control" placeholder="Buscar por comprobante o cliente…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+        </div>
+      </div>
+      @if (cargando()) {
+        <div class="card-cuerpo pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 44px"></div> }</div>
+      } @else if (tabla.filtradas().length) {
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead>
+              <tr><th>Factura</th><th>Cliente</th><th class="right">Saldo</th><th class="ocultar-movil">Próximo vencimiento</th><th>Estado</th><th></th></tr>
+            </thead>
+            <tbody>
+              @for (c of tabla.visibles(); track c.ventaId; let i = $index) {
+                <tr [style.--i]="i" class="fila" (click)="abrir(c)">
+                  <td><strong class="mono">{{ c.numeroComprobante }}</strong><small class="muted" style="display: block">{{ c.fecha | date: 'd MMM y' }}</small></td>
+                  <td>{{ c.nombreCliente }}<small class="muted mono" style="display: block">{{ c.documentoCliente }}</small></td>
+                  <td class="right num"><strong>{{ soles(c.saldo) }}</strong><small class="muted" style="display: block">de {{ soles(c.deuda) }}</small></td>
+                  <td class="ocultar-movil">{{ c.proximoVencimiento ? (c.proximoVencimiento | date: 'd MMM y') : '—' }}</td>
+                  <td>
+                    @let s = etiquetaCuenta(c.estado);
+                    <span class="badge punto" [class]="s.clase">{{ s.texto }}</span>
+                    @if (c.diasAtraso) { <small class="text-danger" style="display: block">{{ c.diasAtraso }} días</small> }
+                  </td>
+                  <td class="right"><app-icon name="derecha" [size]="16" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+          [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+      } @else {
+        <app-vacio icono="billetera" titulo="Sin cuentas en esta vista"
+          texto="Aquí aparecen las facturas emitidas al crédito. Las ventas al contado no generan cuentas por cobrar." />
+      }
+    </article>
+
+    <article class="card entrada">
+      <header class="card-cabecera"><div><h3>Deuda por cliente</h3><p>Saldo total de cada cliente</p></div></header>
+      <div class="card-cuerpo clientes">
+        @for (d of resumen()?.porCliente ?? []; track d.clienteId) {
+          <div class="cliente">
+            <span class="avatar" [style.background]="colorAvatar(d.nombre)">{{ iniciales(d.nombre) }}</span>
+            <div class="cliente-texto"><strong>{{ d.nombre }}</strong><small class="muted">{{ d.facturas }} {{ d.facturas === 1 ? 'factura' : 'facturas' }}</small></div>
+            <div class="right">
+              <strong class="num">{{ soles(d.saldo) }}</strong>
+              @if (d.vencido > 0) { <small class="text-danger num" style="display: block">{{ soles(d.vencido) }} vencido</small> }
+            </div>
+          </div>
+        } @empty {
+          <p class="muted">Ningún cliente tiene deuda.</p>
+        }
+      </div>
+    </article>
+  </div>
+</div>
+
+<app-panel [abierto]="!!detalle() || cargandoDetalle()" (cerrar)="detalle.set(null); cargandoDetalle.set(false)" etiqueta="Estado de cuenta"
+  [titulo]="detalle()?.cuenta?.numeroComprobante ?? 'Cargando…'" [ancho]="620"
+  [descripcion]="detalle() ? detalle()!.cuenta.nombreCliente + ' · ' + detalle()!.cuenta.documentoCliente : ''">
+  @if (detalle(); as d) {
+    <div class="pila" style="gap: 18px">
+      <div class="totales">
+        <div><span>Deuda</span><strong class="num">{{ soles(d.cuenta.deuda) }}</strong></div>
+        <div><span>Cobrado</span><strong class="num text-success">{{ soles(d.cuenta.cobrado) }}</strong></div>
+        <div><span>Saldo</span><strong class="num" [class.text-danger]="d.cuenta.vencido > 0">{{ soles(d.cuenta.saldo) }}</strong></div>
+      </div>
+      @if (d.notasCredito > 0 || d.notasDebito > 0) {
+        <p class="ayuda">Incluye notas: crédito −{{ soles(d.notasCredito) }} · débito +{{ soles(d.notasDebito) }}.</p>
+      }
+
+      <section>
+        <h4>Cuotas</h4>
+        <table class="tabla compacta">
+          <thead><tr><th>Concepto</th><th>Vence</th><th class="right">Monto</th><th class="right">Cobrado</th><th>Estado</th></tr></thead>
+          <tbody>
+            @for (t of d.tramos; track t.descripcion) {
+              <tr>
+                <td>{{ t.descripcion }}</td>
+                <td class="nowrap">{{ t.vence | date: 'd MMM y' }}</td>
+                <td class="right num">{{ soles(t.monto) }}</td>
+                <td class="right num">{{ soles(t.cobrado) }}</td>
+                <td>
+                  @let e = etiquetaTramo(t.estado);
+                  <span class="badge" [class]="e.clase">{{ e.texto }}</span>
+                  @if (t.diasVencido) { <small class="text-danger" style="display: block">{{ t.diasVencido }} días</small> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+
+      @if (puedeRegistrar && d.cuenta.saldo > 0) {
+        <section class="registrar">
+          <h4>Registrar cobro</h4>
+          <div class="rejilla">
+            <label class="campo">Monto (S/)
+              <input type="number" class="control num" min="0" step="0.01" [value]="monto()" (input)="monto.set(+$any($event.target).value)" />
+            </label>
+            <label class="campo">Fecha
+              <input type="date" class="control" [max]="hoy" [value]="fecha()" (change)="fecha.set($any($event.target).value)" />
+            </label>
+            <label class="campo">Medio
+              <select class="control" [value]="medio()" (change)="medio.set($any($event.target).value)">
+                @for (m of medios; track m.codigo) { <option [value]="m.codigo">{{ m.texto }}</option> }
+              </select>
+            </label>
+            <label class="campo">N.° de operación <span class="muted">(opcional)</span>
+              <input class="control mono" maxlength="60" [value]="referencia()" (input)="referencia.set($any($event.target).value)" />
+            </label>
+          </div>
+          <div class="acciones-cobro">
+            <button type="button" class="btn btn-sm" (click)="monto.set(d.cuenta.saldo)">Todo el saldo ({{ soles(d.cuenta.saldo) }})</button>
+            <button type="button" class="btn btn-primario" [disabled]="guardando()" (click)="registrar()">
+              @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="16" /> Registrar cobro }
+            </button>
+          </div>
+        </section>
+      }
+
+      <section>
+        <h4>Cobros registrados</h4>
+        @if (d.cobros.length) {
+          <table class="tabla compacta">
+            <thead><tr><th>Fecha</th><th>Medio</th><th>Operación</th><th class="right">Monto</th></tr></thead>
+            <tbody>
+              @for (c of d.cobros; track c.id) {
+                <tr>
+                  <td class="nowrap">{{ c.fecha | date: 'd MMM y' }}</td>
+                  <td>{{ nombreMedio[c.medio] }}</td>
+                  <td class="mono">{{ c.referencia || '—' }}</td>
+                  <td class="right num">{{ soles(c.monto) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="muted">Aún no hay cobros para esta factura.</p>
+        }
+      </section>
+    </div>
+  } @else {
+    <div class="pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 50px"></div> }</div>
+  }
+</app-panel>

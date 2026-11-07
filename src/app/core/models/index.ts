@@ -460,6 +460,64 @@ export interface NotaRequest {
 
 export type MotivosNota = Record<TipoNota, Record<string, string>>;
 
+// ---------- Cuentas por cobrar ----------
+export type MedioPago = 'EFECTIVO' | 'TRANSFERENCIA' | 'DEPOSITO' | 'TARJETA' | 'YAPE_PLIN';
+export type EstadoCuenta = 'VENCIDA' | 'AL_DIA' | 'PAGADA';
+export type EstadoTramo = 'PAGADA' | 'PARCIAL' | 'PENDIENTE' | 'VENCIDA';
+
+export interface CuentaPorCobrar {
+  ventaId: number;
+  numeroComprobante: string;
+  fecha: string;
+  clienteId: number;
+  documentoCliente: string;
+  nombreCliente: string;
+  deuda: number;
+  cobrado: number;
+  saldo: number;
+  vencido: number;
+  proximoVencimiento: string | null;
+  diasAtraso: number;
+  estado: EstadoCuenta;
+}
+
+export interface Cobro {
+  id: number;
+  fecha: string;
+  monto: number;
+  medio: MedioPago;
+  referencia: string | null;
+  registradoPor: string | null;
+  registradoEn: string;
+}
+
+export interface TramoCobranza {
+  descripcion: string;
+  vence: string;
+  monto: number;
+  cobrado: number;
+  pendiente: number;
+  estado: EstadoTramo;
+  diasVencido: number;
+}
+
+export interface EstadoDeCuenta {
+  cuenta: CuentaPorCobrar;
+  notasCredito: number;
+  notasDebito: number;
+  tramos: TramoCobranza[];
+  cobros: Cobro[];
+}
+
+export interface ResumenCobranza {
+  porCobrar: number;
+  vencido: number;
+  cobradoEsteMes: number;
+  facturasPendientes: number;
+  facturasVencidas: number;
+  porCliente: { clienteId: number; documento: string; nombre: string; facturas: number; saldo: number; vencido: number }[];
+}
+
 /* PUBLICO: empresa de transporte (RUC) · PRIVADO: vehículo propio (placa y conductor) */
 export type ModalidadTraslado = 'PUBLICO' | 'PRIVADO';
 
