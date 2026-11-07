@@ -107,6 +107,11 @@
                     <button type="button" class="btn btn-fantasma btn-sm" (click)="verComprobante(v)" title="Ver e imprimir el comprobante">
                       <app-icon name="documento" [size]="15" /> Ver
                     </button>
+                    @if (puedeGuias && v.estado === 'EMITIDA') {
+                      <a class="btn btn-fantasma btn-sm" routerLink="/guias" [queryParams]="{ venta: v.id }" title="Guía de remisión para despachar esta venta">
+                        <app-icon name="camion" [size]="15" /> Guía
+                      </a>
+                    }
                     @if (puedeNotas && v.estado === 'EMITIDA' && v.sunat.estado === 'ACEPTADO') {
                       <a class="btn btn-fantasma btn-sm" routerLink="/notas" [queryParams]="{ venta: v.id }"
                         title="Nota de crédito o débito: devoluciones, descuentos, anulación, intereses">

@@ -1,0 +1,69 @@
+.nowrap { white-space: nowrap; }
+@media (max-width: 760px) { .ocultar-movil { display: none; } }
+
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  h4 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-3); }
+}
+
+.campo { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  .ancho { grid-column: span 2; }
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr 1fr;
+    .ancho { grid-column: 1 / -1; }
+  }
+}
+
+// Fila de un bien: [n.° | producto del catálogo | quitar] y debajo [descripción | cantidad | unidad]
+.bien {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 32px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  > .num-linea { grid-column: 1; }
+  > select:first-of-type { grid-column: 2 / 5; min-width: 0; }
+  > button { grid-column: 5; }
+  > .descripcion { grid-column: 1 / 3; }
+  > input.num { grid-column: 3; }
+  > select:last-of-type { grid-column: 4 / 6; min-width: 0; }
+  @media (max-width: 560px) {
+    > .descripcion { grid-column: 1 / -1; }
+    > input.num { grid-column: 1 / 3; }
+  }
+}
+
+.num-linea {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.problemas {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12.5px;
+  li { display: flex; gap: 6px; align-items: center; }
+}

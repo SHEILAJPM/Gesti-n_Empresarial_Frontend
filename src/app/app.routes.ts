@@ -106,6 +106,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/comercial/notas').then((m) => m.Notas)
       },
       {
+        path: 'guias',
+        title: 'Guías de remisión · Nexo',
+        data: { permiso: 'guias.ver' },
+        loadComponent: () => import('./features/comercial/guias').then((m) => m.Guias)
+      },
+      {
         path: 'compras',
         title: 'Compras · Nexo',
         data: { permiso: 'compras.ver' },

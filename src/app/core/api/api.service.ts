@@ -6,7 +6,7 @@ import {
   CeseRequest, Cliente, ClienteRequest, DocumentoConsultado, EstadoFacturacion, IntentoMarcacion, MiBoleta, MiPerfil, Sede, TipoComprobante, Compra, CompraRequest, ConfiguracionTributaria, Documento, DocumentoRequest,
   Marcacion, MarcarRequest, Pago, PagoRequest, Planilla, Proveedor, ProveedorRequest, ResumenAsistencia, ResumenTributario, Simulacion,
   Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest, Producto, ProductoRequest,
-  MotivosNota, Nota, NotaRequest
+  MotivosNota, Nota, NotaRequest, Guia, GuiaRequest
 } from '../models';
 import type { RespuestaLogin } from '../auth/auth.service';
 
@@ -65,6 +65,14 @@ export class ApiService {
     emitir: (datos: NotaRequest) => this.post<Nota>('/api/notas', datos),
     consultarSunat: (id: number) => this.get<Nota>(`/api/notas/${id}/sunat`),
     reenviarSunat: (id: number) => this.post<Nota>(`/api/notas/${id}/sunat/reenviar`, null)
+  };
+
+  readonly guias = {
+    listar: (ventaId?: number) => this.get<Guia[]>('/api/guias', ventaId ? { ventaId } : undefined),
+    obtener: (id: number) => this.get<Guia>(`/api/guias/${id}`),
+    motivos: () => this.get<Record<string, string>>('/api/guias/motivos'),
+    emitir: (datos: GuiaRequest) => this.post<Guia>('/api/guias', datos),
+    reenviarSunat: (id: number) => this.post<Guia>(`/api/guias/${id}/sunat/reenviar`, null)
   };
 
   readonly productos = {

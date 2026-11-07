@@ -1,0 +1,234 @@
+<div class="pila">
+  <app-page-header seccion="Comercial" titulo="Guías de remisión"
+    descripcion="Sustentan el traslado de mercadería. Se crean desde una venta (botón «Guía») o para un traslado independiente.">
+    @if (puedeEmitir) {
+      <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nueva guía</button>
+    }
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Guías emitidas" [valor]="guias().length" icono="camion" [cargando]="cargando()" />
+    <app-stat-card style="--i: 1" titulo="Emitidas hoy" [valor]="deHoy()" icono="calendario" tono="info" [cargando]="cargando()" />
+    <app-stat-card style="--i: 2" titulo="Con vehículo propio" [valor]="propias()" icono="ubicacion" tono="exito" [cargando]="cargando()"
+      [detalle]="guias().length - propias() + ' con empresa de transporte'" />
+  </section>
+
+  <article class="card entrada">
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar por número, destinatario, comprobante o placa…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+    </div>
+    @if (cargando()) {
+      <div class="card-cuerpo pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 44px"></div> }</div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Guía</th><th>Destinatario</th><th class="ocultar-movil">Motivo</th><th>Traslado</th><th class="ocultar-movil">Transporte</th><th>SUNAT</th><th class="right">Acciones</th></tr>
+          </thead>
+          <tbody>
+            @for (g of tabla.visibles(); track g.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td><strong class="mono">{{ g.numero }}</strong>
+                  @if (g.comprobanteRelacionado) { <small class="muted" style="display: block">por {{ g.comprobanteRelacionado }}</small> }
+                </td>
+                <td>{{ g.destinatarioNombre }}<small class="muted mono" style="display: block">{{ g.destinatarioDocumento }}</small></td>
+                <td class="ocultar-movil ink-2">{{ g.motivo }}</td>
+                <td class="nowrap">{{ g.fechaTraslado | date: 'd MMM y' }}</td>
+                <td class="ocultar-movil">
+                  @if (g.modalidad === 'PRIVADO') { <span class="badge badge-exito">Propio</span> <span class="mono">{{ g.vehiculoPlaca }}</span> }
+                  @else { <span class="badge badge-info">Empresa</span> {{ g.transportistaRazonSocial }} }
+                </td>
+                <td>@let s = etiquetaSunat(g.sunat.estado); <span class="badge punto" [class]="s.clase">{{ s.texto }}</span></td>
+                <td class="right"><button type="button" class="btn btn-fantasma btn-sm" (click)="ver(g)"><app-icon name="documento" [size]="15" /> Ver</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="camion" [titulo]="guias().length ? 'Sin coincidencias' : 'Aún no hay guías'"
+        [texto]="guias().length ? 'Prueba con otro término.' : 'Crea una desde una venta (botón «Guía») o con «Nueva guía».'" />
+    }
+  </article>
+</div>
+
+<!-- Emitir guía -->
+<app-panel [abierto]="abierto()" (cerrar)="cerrar()" etiqueta="Guía de remisión remitente" titulo="Nueva guía" [ancho]="680"
+  [descripcion]="ventaOrigen() ? 'Por la venta ' + ventaOrigen()!.numeroComprobante + ' a ' + ventaOrigen()!.nombreCliente : 'Traslado de mercadería'">
+  <div class="pila" style="gap: 18px">
+    <section class="bloque">
+      <h4>Traslado</h4>
+      <div class="rejilla">
+        <label class="campo">Motivo
+          <select class="control" [value]="motivo()" (change)="motivo.set($any($event.target).value)">
+            @for (m of listaMotivos(); track m.codigo) { <option [value]="m.codigo">{{ m.texto }}</option> }
+          </select>
+        </label>
+        <label class="campo">Inicio del traslado
+          <input type="date" class="control" [min]="hoy" [value]="fechaTraslado()" (change)="fechaTraslado.set($any($event.target).value)" />
+        </label>
+        <label class="campo">Peso bruto (kg)
+          <input type="number" class="control num" min="0" step="0.1" [value]="peso()" (input)="peso.set(+$any($event.target).value)" />
+        </label>
+        <label class="campo">Bultos <span class="muted">(opcional)</span>
+          <input type="number" class="control num" min="1" [value]="bultos() ?? ''" (input)="bultos.set(+$any($event.target).value || null)" />
+        </label>
+      </div>
+    </section>
+
+    <section class="bloque">
+      <h4>Destinatario</h4>
+      <div class="rejilla">
+        <label class="campo">DNI o RUC
+          <input class="control mono" maxlength="11" inputmode="numeric" [value]="destinatarioDocumento()" (input)="destinatarioDocumento.set($any($event.target).value)" />
+        </label>
+        <label class="campo ancho">Nombre o razón social
+          <input class="control" maxlength="150" [value]="destinatarioNombre()" (input)="destinatarioNombre.set($any($event.target).value)" />
+        </label>
+      </div>
+    </section>
+
+    <section class="bloque">
+      <h4>Recorrido</h4>
+      <div class="rejilla">
+        <label class="campo">Ubigeo de partida
+          <input class="control mono" maxlength="6" inputmode="numeric" placeholder="150101" [value]="partidaUbigeo()" (input)="partidaUbigeo.set($any($event.target).value)" />
+        </label>
+        <label class="campo ancho">Dirección de partida
+          <input class="control" maxlength="200" placeholder="Almacén, calle y número" [value]="partidaDireccion()" (input)="partidaDireccion.set($any($event.target).value)" />
+        </label>
+        <label class="campo">Ubigeo de llegada
+          <input class="control mono" maxlength="6" inputmode="numeric" placeholder="150130" [value]="llegadaUbigeo()" (input)="llegadaUbigeo.set($any($event.target).value)" />
+        </label>
+        <label class="campo ancho">Dirección de llegada
+          <input class="control" maxlength="200" placeholder="Dirección del destinatario" [value]="llegadaDireccion()" (input)="llegadaDireccion.set($any($event.target).value)" />
+        </label>
+      </div>
+      <span class="ayuda">Ubigeo INEI de 6 dígitos: 150101 Lima Cercado, 150122 Miraflores, 150130 San Borja, 150140 Surco, 070101 Callao.</span>
+    </section>
+
+    <section class="bloque">
+      <h4>Transporte</h4>
+      <div class="segmentado">
+        <span class="indicador" [style.width]="'calc(50% - 4px)'" [style.transform]="modalidad() === 'PUBLICO' ? 'translateX(100%)' : 'none'"></span>
+        <button type="button" [class.activo]="modalidad() === 'PRIVADO'" (click)="modalidad.set('PRIVADO')">Vehículo propio</button>
+        <button type="button" [class.activo]="modalidad() === 'PUBLICO'" (click)="modalidad.set('PUBLICO')">Empresa de transporte</button>
+      </div>
+      @if (modalidad() === 'PRIVADO') {
+        <div class="rejilla">
+          <label class="campo">Placa <input class="control mono" maxlength="7" placeholder="ABC-123" [value]="placa()" (input)="placa.set($any($event.target).value)" /></label>
+          <label class="campo">DNI del conductor <input class="control mono" maxlength="8" inputmode="numeric" [value]="conductorDni()" (input)="conductorDni.set($any($event.target).value)" /></label>
+          <label class="campo">Licencia <input class="control mono" maxlength="15" placeholder="Q12345678" [value]="conductorLicencia()" (input)="conductorLicencia.set($any($event.target).value)" /></label>
+          <label class="campo ancho">Nombre del conductor <input class="control" maxlength="150" [value]="conductorNombres()" (input)="conductorNombres.set($any($event.target).value)" /></label>
+        </div>
+      } @else {
+        <div class="rejilla">
+          <label class="campo">RUC del transportista <input class="control mono" maxlength="11" inputmode="numeric" [value]="transportistaRuc()" (input)="transportistaRuc.set($any($event.target).value)" /></label>
+          <label class="campo ancho">Razón social <input class="control" maxlength="150" [value]="transportistaRazon()" (input)="transportistaRazon.set($any($event.target).value)" /></label>
+        </div>
+      }
+    </section>
+
+    <section class="bloque">
+      <h4>Bienes que se trasladan</h4>
+      @for (b of bienes(); track b.clave; let n = $index) {
+        <div class="bien">
+          <span class="num-linea">{{ n + 1 }}</span>
+          <select class="control" aria-label="Producto" (change)="elegirProducto(b.clave, $any($event.target).value)">
+            <option value="">— Escribir a mano —</option>
+            @for (p of productos(); track p.id) { <option [value]="p.id" [selected]="p.codigo === b.codigo">{{ p.codigo }} · {{ p.descripcion }}</option> }
+          </select>
+          <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="quitarBien(b.clave)" aria-label="Quitar"><app-icon name="eliminar" [size]="16" /></button>
+          <input class="control descripcion" maxlength="250" placeholder="Descripción" [value]="b.descripcion" (input)="cambiarBien(b.clave, { descripcion: $any($event.target).value })" />
+          <input type="number" class="control num" min="0" aria-label="Cantidad" [value]="b.cantidad" (input)="cambiarBien(b.clave, { cantidad: +$any($event.target).value })" />
+          <select class="control" aria-label="Unidad" [value]="b.unidad" (change)="cambiarBien(b.clave, { unidad: $any($event.target).value })">
+            @for (u of listaUnidades(); track u.codigo) { <option [value]="u.codigo">{{ u.nombre }}</option> }
+          </select>
+        </div>
+      }
+      <button type="button" class="btn btn-sm" (click)="agregarBien()"><app-icon name="mas" [size]="15" /> Agregar bien</button>
+    </section>
+
+    <label class="campo">Observaciones <span class="muted">(opcional)</span>
+      <textarea class="control" rows="2" maxlength="250" [value]="observaciones()" (input)="observaciones.set($any($event.target).value)"></textarea>
+    </label>
+
+    @if (problemas().length) {
+      <ul class="problemas">@for (p of problemas(); track p) { <li><app-icon name="alerta" [size]="14" /> {{ p }}</li> }</ul>
+    }
+  </div>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="cerrar()">Cancelar</button>
+    <button type="button" class="btn btn-primario" [disabled]="emitiendo() || problemas().length > 0" (click)="emitir()">
+      @if (emitiendo()) { <span class="spinner"></span> Emitiendo… } @else { <app-icon name="check" [size]="17" /> Emitir guía }
+    </button>
+  </ng-container>
+</app-panel>
+
+<!-- Ver / imprimir guía -->
+<app-panel [abierto]="!!vista()" (cerrar)="vista.set(null)" etiqueta="Comprobante" [titulo]="vista()?.numero ?? ''" [ancho]="720"
+  descripcion="Representación impresa de la guía de remisión electrónica">
+  @if (vista(); as g) {
+    @if (cargandoVista()) {
+      <div class="pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 60px"></div> }</div>
+    } @else {
+      <div class="comprobante imprimible">
+        <header class="comp-cabecera">
+          <div>
+            <strong class="comp-emisor">{{ facturacion()?.emisorRazonSocial || 'Empresa emisora' }}</strong>
+            <span>RUC {{ facturacion()?.emisorRuc || '—' }}</span>
+          </div>
+          <div class="comp-recuadro">
+            <span>RUC {{ facturacion()?.emisorRuc || '—' }}</span>
+            <strong>GUÍA DE REMISIÓN ELECTRÓNICA REMITENTE</strong>
+            <span class="mono">{{ g.numero }}</span>
+          </div>
+        </header>
+        <dl class="comp-datos">
+          <div><dt>Fecha de emisión</dt><dd>{{ g.fechaEmision | date: 'dd/MM/yyyy' }}</dd></div>
+          <div><dt>Inicio del traslado</dt><dd>{{ g.fechaTraslado | date: 'dd/MM/yyyy' }}</dd></div>
+          <div><dt>Motivo</dt><dd>{{ g.motivo }}</dd></div>
+          <div><dt>Comprobante</dt><dd class="mono">{{ g.comprobanteRelacionado || '—' }}</dd></div>
+          <div><dt>Destinatario</dt><dd>{{ g.destinatarioNombre }} ({{ g.destinatarioTipoDocumento === '6' ? 'RUC' : 'DNI' }} {{ g.destinatarioDocumento }})</dd></div>
+          <div><dt>Peso bruto</dt><dd>{{ g.pesoBrutoKg | number: '1.0-3' }} kg{{ g.numeroBultos ? ' · ' + g.numeroBultos + ' bultos' : '' }}</dd></div>
+          <div><dt>Punto de partida</dt><dd>{{ g.partidaDireccion }} <span class="mono muted">({{ g.partidaUbigeo }})</span></dd></div>
+          <div><dt>Punto de llegada</dt><dd>{{ g.llegadaDireccion }} <span class="mono muted">({{ g.llegadaUbigeo }})</span></dd></div>
+          @if (g.modalidad === 'PRIVADO') {
+            <div><dt>Transporte</dt><dd>Privado · placa <span class="mono">{{ g.vehiculoPlaca }}</span></dd></div>
+            <div><dt>Conductor</dt><dd>{{ g.conductorNombres }} · DNI {{ g.conductorDni }} · Lic. {{ g.conductorLicencia }}</dd></div>
+          } @else {
+            <div><dt>Transporte</dt><dd>Público</dd></div>
+            <div><dt>Transportista</dt><dd>{{ g.transportistaRazonSocial }} · RUC {{ g.transportistaRuc }}</dd></div>
+          }
+        </dl>
+        <table class="comp-items">
+          <thead><tr><th>N.°</th><th>Código</th><th>Descripción</th><th>Unidad</th><th class="right">Cantidad</th></tr></thead>
+          <tbody>
+            @for (i of g.items; track i.orden) {
+              <tr><td>{{ i.orden }}</td><td class="mono">{{ i.codigo || '—' }}</td><td>{{ i.descripcion }}</td>
+                <td>{{ unidades()[i.unidad] ?? i.unidad }}</td><td class="right num">{{ i.cantidad | number: '1.0-3' }}</td></tr>
+            }
+          </tbody>
+        </table>
+        @if (g.observaciones) { <p><strong>Observaciones:</strong> {{ g.observaciones }}</p> }
+        <footer class="comp-legal">
+          Representación impresa de la guía de remisión electrónica remitente.
+          @if (g.sunat.estado === 'ACEPTADO') { Aceptada por SUNAT. } @else { Estado en SUNAT: {{ etiquetaSunat(g.sunat.estado).texto }}. }
+        </footer>
+      </div>
+    }
+  }
+  <ng-container ngProjectAs="[pie]">
+    @if (vista(); as g) {
+      @if (puedeEmitir && ['NO_ENVIADO', 'ERROR', 'RECHAZADO', 'EXCEPCION'].includes(g.sunat.estado)) {
+        <button type="button" class="btn" (click)="reenviar(g)"><app-icon name="flecha" [size]="16" /> Reenviar a SUNAT</button>
+      }
+      <button type="button" class="btn btn-primario" [disabled]="cargandoVista()" (click)="imprimir()"><app-icon name="documento" [size]="16" /> Imprimir</button>
+    }
+  </ng-container>
+</app-panel>

@@ -9,17 +9,20 @@ export const PERMISOS = {
   'asistencia.ver': ['ADMIN', 'RRHH'],
   'documentos.ver': ['ADMIN', 'RRHH'],
 
-  'ventas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
+  // Almacén consulta las ventas para despacharlas con guía
+  'ventas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR', 'ALMACEN'],
   // Emitir boletas y facturas: Administración y los vendedores
   'ventas.editar': ['ADMIN', 'ADMINISTRACION', 'VENDEDOR'],
   'ventas.anular': ['ADMIN', 'CONTABILIDAD'],
-  'clientes.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
+  'clientes.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR', 'ALMACEN'],
   'clientes.crear': ['ADMIN', 'ADMINISTRACION', 'VENDEDOR'],
   'clientes.editar': ['ADMIN', 'ADMINISTRACION'],
-  'productos.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
+  'productos.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR', 'ALMACEN'],
   'productos.editar': ['ADMIN', 'ADMINISTRACION'],
   'notas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
   'notas.emitir': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
+  'guias.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD', 'ALMACEN', 'VENDEDOR'],
+  'guias.emitir': ['ADMIN', 'ADMINISTRACION', 'ALMACEN', 'VENDEDOR'],
 
   'compras.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],
   'compras.editar': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],

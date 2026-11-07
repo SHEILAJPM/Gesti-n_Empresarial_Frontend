@@ -459,3 +459,70 @@ export interface NotaRequest {
 }
 
 export type MotivosNota = Record<TipoNota, Record<string, string>>;
+
+/* PUBLICO: empresa de transporte (RUC) · PRIVADO: vehículo propio (placa y conductor) */
+export type ModalidadTraslado = 'PUBLICO' | 'PRIVADO';
+
+export interface GuiaItem {
+  orden: number;
+  codigo: string | null;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+}
+
+/* Guía de remisión remitente (serie T001) */
+export interface Guia {
+  id: number;
+  numero: string;
+  fechaEmision: string;
+  fechaTraslado: string;
+  motivoCodigo: string;
+  motivo: string;
+  ventaId: number | null;
+  comprobanteRelacionado: string | null;
+  destinatarioTipoDocumento: string;
+  destinatarioDocumento: string;
+  destinatarioNombre: string;
+  pesoBrutoKg: number;
+  numeroBultos: number | null;
+  modalidad: ModalidadTraslado;
+  transportistaRuc: string | null;
+  transportistaRazonSocial: string | null;
+  vehiculoPlaca: string | null;
+  conductorDni: string | null;
+  conductorNombres: string | null;
+  conductorLicencia: string | null;
+  partidaUbigeo: string;
+  partidaDireccion: string;
+  llegadaUbigeo: string;
+  llegadaDireccion: string;
+  observaciones: string | null;
+  registradaPor: string | null;
+  sunat: ComprobanteSunat;
+  /* Solo al consultar una guía (GET /api/guias/{id}) */
+  items: GuiaItem[];
+}
+
+export interface GuiaRequest {
+  ventaId?: number | null;
+  motivoCodigo: string;
+  fechaTraslado?: string;
+  destinatarioDocumento?: string;
+  destinatarioNombre?: string;
+  pesoBrutoKg: number;
+  numeroBultos?: number | null;
+  modalidad: ModalidadTraslado;
+  transportistaRuc?: string;
+  transportistaRazonSocial?: string;
+  vehiculoPlaca?: string;
+  conductorDni?: string;
+  conductorNombres?: string;
+  conductorLicencia?: string;
+  partidaUbigeo: string;
+  partidaDireccion: string;
+  llegadaUbigeo: string;
+  llegadaDireccion: string;
+  observaciones?: string | null;
+  items?: { codigo: string | null; descripcion: string; unidad: string; cantidad: number }[];
+}

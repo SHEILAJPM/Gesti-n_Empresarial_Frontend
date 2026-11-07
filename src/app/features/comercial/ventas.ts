@@ -33,6 +33,7 @@ export class Ventas {
   protected readonly puedeEditar = this.auth.puede('ventas.editar');
   protected readonly puedeAnular = this.auth.puede('ventas.anular');
   protected readonly puedeNotas = this.auth.puede('notas.emitir');
+  protected readonly puedeGuias = this.auth.puede('guias.emitir');
   protected readonly soles = soles;
   protected readonly iniciales = iniciales;
   protected readonly colorAvatar = colorAvatar;
