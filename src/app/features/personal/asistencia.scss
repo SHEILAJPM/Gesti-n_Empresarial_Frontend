@@ -66,3 +66,46 @@
   color: var(--ink-3);
   app-icon { color: var(--brand); margin-top: 1px; }
 }
+
+// El motivo completo queda en el title; en la tabla se ve en dos líneas
+.motivo {
+  max-width: 260px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .ocultar-movil { display: none; }
+}
+
+// Panel de la foto: imagen y los datos que registró el servidor
+.evidencia { gap: 16px; }
+
+.motivo-rechazo {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+  app-icon { flex-shrink: 0; margin-top: 1px; }
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+  div { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+  .completo { grid-column: 1 / -1; }
+  dt { font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+  dd { margin: 2px 0 0; font-weight: 600; color: var(--ink); }
+  a { margin-left: 8px; font-family: var(--font-body, inherit); font-weight: 600; color: var(--brand); }
+}
+
+.nota-resumen { padding: 10px 20px 16px; }

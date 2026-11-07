@@ -63,6 +63,23 @@ import { Mapa, Posicion, Punto } from '../../shared/mapa';
               <input id="s-prec" #pr type="range" min="5" max="100" step="1" [value]="precision()" (input)="precision.set(+pr.value)" [disabled]="!puedeEditar" />
               <span class="ayuda">Si el celular reporta un error mayor (por ejemplo, ubicación aproximada), la marcación se rechaza.</span>
             </div>
+            <div class="horario">
+              <div class="campo">
+                <label for="s-entrada">Hora de entrada</label>
+                <input id="s-entrada" #he type="time" class="control" [value]="horaEntrada()" (change)="horaEntrada.set(he.value)" [disabled]="!puedeEditar" />
+              </div>
+              <div class="campo">
+                <label for="s-salida">Hora de salida</label>
+                <input id="s-salida" #hs type="time" class="control" [value]="horaSalida()" (change)="horaSalida.set(hs.value)" [disabled]="!puedeEditar" />
+              </div>
+              <div class="campo">
+                <label for="s-tol">Tolerancia</label>
+                <select id="s-tol" #tl class="control" [value]="tolerancia()" (change)="tolerancia.set(+tl.value)" [disabled]="!puedeEditar">
+                  @for (t of tolerancias; track t) { <option [value]="t">{{ t }} min</option> }
+                </select>
+              </div>
+            </div>
+            <span class="ayuda">Una entrada después de las {{ limiteTardanza() }} cuenta como tardanza en el resumen mensual de asistencia.</span>
             @if (puedeEditar) {
               <button type="button" class="btn btn-primario" [disabled]="guardando() || !punto() || !nombre().trim()" (click)="guardar()">
                 @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> Guardar ubicación }
@@ -79,6 +96,8 @@ import { Mapa, Posicion, Punto } from '../../shared/mapa';
     app-mapa { --alto-mapa: 440px; }
     .coordenadas { margin-top: 10px; font-size: 12.5px; color: var(--ink-3); }
     input[type=range] { width: 100%; accent-color: var(--brand); }
+    .horario { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 480px) { .horario { grid-template-columns: 1fr 1fr; } }
   `
 })
 export class SedeUbicacion {
@@ -91,6 +110,15 @@ export class SedeUbicacion {
   protected readonly direccion = signal('');
   protected readonly radio = signal(12);
   protected readonly precision = signal(25);
+  protected readonly horaEntrada = signal('08:00');
+  protected readonly horaSalida = signal('17:00');
+  protected readonly tolerancia = signal(10);
+  protected readonly tolerancias = [0, 5, 10, 15, 20, 30];
+  protected readonly limiteTardanza = computed(() => {
+    const [h, m] = this.horaEntrada().split(':').map(Number);
+    const total = h * 60 + m + this.tolerancia();
+    return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  });
   protected readonly guardando = signal(false);
   protected readonly ubicando = signal(false);
   protected readonly miPosicion = signal<Posicion | null>(null);
@@ -106,6 +134,9 @@ export class SedeUbicacion {
         this.direccion.set(s.direccion ?? '');
         this.radio.set(s.radioMetros);
         this.precision.set(s.precisionMaxima);
+        if (s.horaEntrada) this.horaEntrada.set(s.horaEntrada.slice(0, 5));
+        if (s.horaSalida) this.horaSalida.set(s.horaSalida.slice(0, 5));
+        if (s.toleranciaMinutos !== undefined && s.toleranciaMinutos !== null) this.tolerancia.set(s.toleranciaMinutos);
       },
       error: (e) => this.toast.error(mensajeDeError(e))
     });
@@ -143,7 +174,10 @@ export class SedeUbicacion {
       latitud: Number(p.lat.toFixed(7)),
       longitud: Number(p.lng.toFixed(7)),
       radioMetros: this.radio(),
-      precisionMaxima: this.precision()
+      precisionMaxima: this.precision(),
+      horaEntrada: `${this.horaEntrada()}:00`,
+      horaSalida: `${this.horaSalida()}:00`,
+      toleranciaMinutos: this.tolerancia()
     }).subscribe({
       next: () => {
         this.toast.exito(`Ubicación guardada: el personal podrá marcar a máximo ${this.radio()} m.`);

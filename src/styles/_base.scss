@@ -38,6 +38,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .ink-2 { color: var(--ink-2); }
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }
+.text-alerta { color: var(--accent); font-weight: 600; }
 .right { text-align: right; }
 .nowrap { white-space: nowrap; }
 
@@ -86,6 +87,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
     overflow: visible;
   }
   html.imprimiendo-boleta .boleta-contenedor { position: static; overflow: visible; box-shadow: none; }
+
+  // Comprobante de venta (factura/boleta): solo se imprime .imprimible
+  html.imprimiendo-comprobante body * { visibility: hidden; }
+  html.imprimiendo-comprobante .imprimible,
+  html.imprimiendo-comprobante .imprimible * { visibility: visible; }
+  html.imprimiendo-comprobante .imprimible {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  html.imprimiendo-comprobante app-panel .panel { position: static; width: auto !important; box-shadow: none; border: 0; }
+  html.imprimiendo-comprobante app-panel .cuerpo { overflow: visible; }
 }
 
 // Mapas en modo oscuro: se invierten las teselas de OpenStreetMap para que no encandilen

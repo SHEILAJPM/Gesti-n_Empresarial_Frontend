@@ -15,6 +15,8 @@ export interface Sesion {
   usuario: string;
   rol: Rol;
   token: string;
+  /* Fecha ISO en que vence el JWT */
+  expiraEn: string;
   trabajadorId: number | null;
 }
 
@@ -74,6 +76,8 @@ export interface Marcacion {
   longitud: number | null;
   precisionMetros: number | null;
   distanciaMetros: number | null;
+  /* Foto tomada al marcar desde el celular; las registradas por RRHH no tienen */
+  fotoId: number | null;
 }
 
 export interface IntentoMarcacion {
@@ -87,6 +91,7 @@ export interface IntentoMarcacion {
   latitud: number;
   longitud: number;
   motivo: string;
+  fotoId: number | null;
 }
 
 export interface Sede {
@@ -97,6 +102,10 @@ export interface Sede {
   longitud: number;
   radioMetros: number;
   precisionMaxima: number;
+  /* Horario (HH:mm:ss): con él se calculan tardanzas y faltas */
+  horaEntrada: string;
+  horaSalida: string;
+  toleranciaMinutos: number;
 }
 
 export interface MiPerfil {
@@ -202,7 +211,45 @@ export interface Venta {
   tasaAplicada: number;
   estado: EstadoVenta;
   sunat: ComprobanteSunat;
+  formaPago: FormaPago;
+  observaciones: string | null;
+  /* Solo vienen al consultar una venta (GET /api/ventas/{id}); en el listado llegan vacíos */
+  items: VentaItem[];
+  cuotas: VentaCuota[];
+  montoEnLetras: string | null;
 }
+
+export type FormaPago = 'CONTADO' | 'CREDITO';
+
+export interface VentaItem {
+  orden: number;
+  productoId: number | null;
+  codigo: string | null;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+  valorUnitario: number;
+  valorVenta: number;
+  igv: number;
+}
+
+export interface VentaCuota {
+  numero: number;
+  fechaVencimiento: string;
+  monto: number;
+}
+
+/* Producto o servicio del catálogo; valorUnitario es SIN IGV */
+export interface Producto {
+  id: number;
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  valorUnitario: number;
+  activo: boolean;
+}
+
+export type ProductoRequest = Omit<Producto, 'id' | 'activo'>;
 
 export type EstadoSunat = 'NO_ENVIADO' | 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO' | 'EXCEPCION' | 'ERROR';
 
@@ -228,8 +275,12 @@ export interface EstadoFacturacion {
 export interface VentaRequest {
   documentoCliente: string;
   numeroComprobante: string;
-  montoSinIgv: number;
+  montoSinIgv?: number | null;
   fecha: string;
+  items?: { productoId: number | null; codigo: string | null; descripcion: string; unidad: string; cantidad: number; valorUnitario: number }[];
+  formaPago?: FormaPago;
+  cuotas?: { fechaVencimiento: string; monto: number }[];
+  observaciones?: string | null;
 }
 
 export interface Pago {
@@ -315,6 +366,8 @@ export interface PlanillaDetalle {
   tasaPension: number;
   descuentoPension: number;
   essalud: number;
+  /* Retención de renta de 5ta categoría del mes */
+  rentaQuinta: number;
   neto: number;
   pagoId: number | null;
   estadoPago: EstadoPago | null;
@@ -345,3 +398,64 @@ export interface ErrorApi {
   mensaje: string;
   errores?: Record<string, string>;
 }
+
+export interface FilaResumenAsistencia {
+  trabajadorId: number;
+  nombres: string;
+  documento: string;
+  area: string;
+  diasLaborables: number;
+  diasAsistidos: number;
+  faltas: number;
+  tardanzas: number;
+  minutosTardanza: number;
+  horasTrabajadas: number;
+  diasSinSalida: number;
+}
+
+/* Resumen mensual de asistencia según el horario de la sede */
+export interface ResumenAsistencia {
+  anio: number;
+  mes: number;
+  horaEntrada: string;
+  toleranciaMinutos: number;
+  trabajadores: FilaResumenAsistencia[];
+}
+
+export type TipoNota = 'CREDITO' | 'DEBITO';
+
+/* Nota de crédito (resta) o de débito (suma) sobre una factura o boleta */
+export interface Nota {
+  id: number;
+  tipo: TipoNota;
+  numero: string;
+  fecha: string;
+  motivoCodigo: string;
+  motivo: string;
+  sustento: string;
+  ventaId: number;
+  tipoComprobanteAfectado: TipoComprobante;
+  numeroAfectado: string;
+  documentoCliente: string;
+  nombreCliente: string;
+  montoSinIgv: number;
+  igv: number;
+  montoTotal: number;
+  tasaAplicada: number;
+  registradaPor: string | null;
+  sunat: ComprobanteSunat;
+  /* Solo al consultar una nota (GET /api/notas/{id}) */
+  items: VentaItem[];
+  montoEnLetras: string | null;
+}
+
+export interface NotaRequest {
+  ventaId: number;
+  tipo: TipoNota;
+  motivoCodigo: string;
+  sustento: string;
+  fecha?: string;
+  items?: { productoId: null; codigo: string | null; descripcion: string; unidad: string; cantidad: number; valorUnitario: number }[];
+}
+
+export type MotivosNota = Record<TipoNota, Record<string, string>>;

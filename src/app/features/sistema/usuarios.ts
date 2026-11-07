@@ -9,6 +9,7 @@ import { ConfirmService } from '../../core/ui/confirm.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { ErrorCampo, PageHeader, Paginador, Vacio } from '../../shared/bloques';
 import { colorAvatar, iniciales } from '../../shared/formato';
+import { CambiarClave } from '../../shared/cambiar-clave';
 import { Icon } from '../../shared/icon';
 import { Panel } from '../../shared/panel';
 import { StatCard } from '../../shared/stat-card';
@@ -26,7 +27,7 @@ const DESCRIPCION_ROL: Record<Rol, string> = {
 
 @Component({
   selector: 'app-usuarios',
-  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo],
+  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo, CambiarClave],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usuarios.html'
 })
@@ -44,6 +45,8 @@ export class Usuarios {
   protected readonly cargando = signal(true);
   protected readonly usuarios = signal<Usuario[]>([]);
   protected readonly cambiandoId = signal<number | null>(null);
+  /* Cuenta a la que el administrador le restablece la contraseña */
+  protected readonly claveDe = signal<Usuario | null>(null);
   protected readonly tabla = new TablaEstado(this.usuarios, (u) => `${u.username} ${NOMBRES_ROL[u.rol]}`, 10);
   protected readonly activos = computed(() => this.usuarios().filter((u) => u.activo).length);
 
@@ -52,7 +55,8 @@ export class Usuarios {
   protected readonly verClave = signal(false);
   protected readonly form = inject(NonNullableFormBuilder).group({
     username: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._-]{3,50}$/)]],
-    password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(72)]],
+    // Mismas reglas que el backend: 8 caracteres o más, con letras y números
+    password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(72), Validators.pattern(/^(?=.*\p{L})(?=.*\d).+$/u)]],
     rol: ['ADMINISTRACION' as Rol, Validators.required],
     trabajadorId: [null as number | null]
   });

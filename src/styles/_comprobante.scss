@@ -1,0 +1,97 @@
+// Comprobante impreso (factura, boleta, nota de crédito/débito): papel blanco también en modo oscuro
+.comprobante {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+  overflow: hidden;
+  .muted { color: #6b7280; }
+}
+.comp-cabecera {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  > div:first-child { display: flex; flex-direction: column; gap: 2px; }
+}
+.comp-emisor { font-size: 17px; }
+.comp-recuadro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  border: 2px solid #111827;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 12.5px;
+  strong { font-size: 13.5px; }
+}
+.comp-datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  div { display: flex; gap: 6px; }
+  dt { min-width: 110px; color: #6b7280; }
+  dd { margin: 0; font-weight: 600; }
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+.comp-items, .comp-cuotas { width: 100%; border-collapse: collapse; }
+.comp-items {
+  th {
+    padding: 8px 6px;
+    text-align: left;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #374151;
+    background: #f3f4f6;
+    border-bottom: 1px solid #d1d5db;
+  }
+  td { padding: 8px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+}
+.comp-cuotas td { padding: 3px 6px 3px 0; }
+.comp-pie {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  .comp-notas { flex: 1; min-width: 220px; p { margin: 0 0 6px; } }
+}
+.comp-totales {
+  display: grid;
+  gap: 4px;
+  min-width: 230px;
+  margin: 0;
+  div { display: flex; justify-content: space-between; gap: 12px; }
+  dt { color: #4b5563; }
+  dd { margin: 0; }
+  .total { padding-top: 6px; border-top: 2px solid #111827; font-size: 15px; font-weight: 800; }
+}
+.comp-legal { padding-top: 10px; border-top: 1px dashed #d1d5db; font-size: 11.5px; color: #6b7280; text-align: center; }
+.sello-anulado {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  padding: 6px 28px;
+  border: 4px solid #dc2626;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  opacity: 0.35;
+  pointer-events: none;
+}

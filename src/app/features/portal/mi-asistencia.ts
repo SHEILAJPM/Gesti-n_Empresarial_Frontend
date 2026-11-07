@@ -1,5 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
@@ -7,18 +8,21 @@ import { NOMBRES_ROL } from '../../core/auth/permisos';
 import { Marcacion, MiPerfil } from '../../core/models';
 import { ToastService } from '../../core/ui/toast.service';
 import { Paginador, Vacio } from '../../shared/bloques';
+import { FotoAsistencia } from '../../shared/foto-asistencia';
 import { colorAvatar, distanciaMetros, hoyIso, iniciales } from '../../shared/formato';
 import { Icon } from '../../shared/icon';
 import { Mapa, Posicion } from '../../shared/mapa';
+import { Panel } from '../../shared/panel';
 import { TablaEstado } from '../../shared/tabla';
+import { CamaraMarcacion, DatosSello, FotoCapturada } from './camara-marcacion';
 
 type EstadoGps = 'buscando' | 'listo' | 'denegado' | 'no-disponible' | 'inseguro';
 
-/* El trabajador marca su entrada/salida con la ubicación del celular.
+/* El trabajador marca su entrada/salida con la ubicación del celular y una foto tomada en ese momento.
    Aquí solo se muestra una vista previa de la distancia; el backend vuelve a calcularla y decide. */
 @Component({
   selector: 'app-mi-asistencia',
-  imports: [DatePipe, DecimalPipe, Icon, Mapa, Paginador, Vacio],
+  imports: [DatePipe, DecimalPipe, Icon, Mapa, Paginador, Vacio, CamaraMarcacion, Panel, FotoAsistencia],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './mi-asistencia.html',
   styleUrl: './mi-asistencia.scss'
@@ -41,6 +45,8 @@ export class MiAsistencia {
   private ultimaLectura = 0;
 
   protected readonly marcando = signal(false);
+  protected readonly camaraAbierta = signal(false);
+  protected readonly fotoVista = signal<Marcacion | null>(null);
   protected readonly resultado = signal<{ ok: boolean; texto: string; hora?: string } | null>(null);
 
   protected readonly sede = computed(() => this.perfil()?.sede ?? null);
@@ -63,6 +69,22 @@ export class MiAsistencia {
   });
 
   protected readonly siguiente = computed(() => this.perfil()?.siguienteMarcacion ?? 'ENTRADA');
+
+  /* Lo que se imprime sobre la foto: se actualiza en vivo mientras el GPS se mueve */
+  protected readonly sello = computed<DatosSello | null>(() => {
+    const p = this.perfil();
+    const s = this.sede();
+    if (!p || !s) return null;
+    return {
+      nombre: p.trabajador.nombres,
+      documento: p.trabajador.documentoIdentidad,
+      tipo: this.siguiente(),
+      sede: s,
+      posicion: this.posicion(),
+      distancia: this.distancia(),
+      dentro: this.dentro()
+    };
+  });
   protected readonly marcacionesHoy = computed(() => {
     const hoy = hoyIso();
     return [...this.historial()].filter((m) => m.fechaHora.startsWith(hoy)).reverse();
@@ -145,28 +167,56 @@ export class MiAsistencia {
     );
   }
 
+  /* Minutos después de la hora de entrada, si pasó la tolerancia de la sede (0 si llegó a tiempo) */
+  private minutosTarde(fechaHora: string): number {
+    const s = this.sede();
+    if (!s?.horaEntrada) return 0;
+    const [h, m] = s.horaEntrada.split(':').map(Number);
+    const llegada = new Date(fechaHora);
+    const minutos = llegada.getHours() * 60 + llegada.getMinutes() - (h * 60 + m);
+    return minutos > (s.toleranciaMinutos ?? 0) ? minutos : 0;
+  }
+
+  /* Paso 1: ubicación. Paso 2: la foto (se abre la cámara con el sello en vivo). */
   protected async marcar(): Promise<void> {
-    if (this.marcando()) return;
-    this.marcando.set(true);
+    if (this.marcando() || this.camaraAbierta()) return;
     this.resultado.set(null);
     try {
-      const p = await this.obtenerPosicion();
-      this.api.portal.marcar(p.lat, p.lng, p.precision).subscribe({
-        next: (m) => {
-          const tipo = m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida';
-          this.resultado.set({ ok: true, texto: `${tipo} registrada`, hora: m.fechaHora });
-          this.toast.exito(`${tipo} registrada a ${Math.round(m.distanciaMetros ?? 0)} m de la empresa.`);
-          this.marcando.set(false);
-          this.cargar();
-        },
-        error: (e) => {
-          this.resultado.set({ ok: false, texto: mensajeDeError(e) });
-          this.marcando.set(false);
-        }
-      });
+      await this.obtenerPosicion();
+      this.camaraAbierta.set(true);
     } catch {
       this.resultado.set({ ok: false, texto: 'No se pudo obtener tu ubicación. Activa el GPS y el permiso de ubicación.' });
-      this.marcando.set(false);
     }
+  }
+
+  /* Se envían la posición con la que se selló la foto y la foto misma; el servidor decide */
+  protected enviar(captura: FotoCapturada): void {
+    const p = captura.posicion;
+    this.marcando.set(true);
+    this.api.portal.marcar({ latitud: p.lat, longitud: p.lng, precision: p.precision, foto: captura.foto }).subscribe({
+      next: (m) => {
+        const tipo = m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida';
+        this.camaraAbierta.set(false);
+        const tarde = m.tipo === 'ENTRADA' ? this.minutosTarde(m.fechaHora) : 0;
+        this.resultado.set({
+          ok: true,
+          texto: tarde > 0 ? `${tipo} registrada · ${tarde} min tarde` : `${tipo} registrada`,
+          hora: m.fechaHora
+        });
+        this.toast.exito(`${tipo} registrada a ${Math.round(m.distanciaMetros ?? 0)} m de la empresa.`);
+        this.marcando.set(false);
+        this.cargar();
+      },
+      error: (e: HttpErrorResponse) => {
+        this.marcando.set(false);
+        if (e.status === 400) {
+          // Problema con la foto (oscura, dañada…): la cámara sigue abierta para repetirla
+          this.toast.error(mensajeDeError(e));
+          return;
+        }
+        this.camaraAbierta.set(false);
+        this.resultado.set({ ok: false, texto: mensajeDeError(e) });
+      }
+    });
   }
 }

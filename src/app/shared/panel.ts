@@ -10,7 +10,7 @@ import { Icon } from './icon';
   template: `
     @if (abierto()) {
       <div class="velo" animate.enter="anim-fade-in" animate.leave="anim-fade-out" (click)="cerrar.emit()"></div>
-      <aside class="panel" role="dialog" aria-modal="true" [attr.aria-label]="titulo()"
+      <aside class="panel" role="dialog" aria-modal="true" [attr.aria-label]="titulo()" [style.width]="'min(' + ancho() + 'px, 100vw)'"
         animate.enter="anim-panel-in" animate.leave="anim-panel-out">
         <header class="papel-contable">
           <div>
@@ -52,6 +52,8 @@ import { Icon } from './icon';
 export class Panel {
   private readonly el = inject(ElementRef<HTMLElement>);
 
+  /* Ancho en píxeles (en el celular ocupa toda la pantalla) */
+  readonly ancho = input(520);
   readonly abierto = input.required<boolean>();
   readonly titulo = input.required<string>();
   readonly etiqueta = input('');

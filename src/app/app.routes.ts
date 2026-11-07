@@ -94,6 +94,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/comercial/clientes').then((m) => m.Clientes)
       },
       {
+        path: 'productos',
+        title: 'Productos · Nexo',
+        data: { permiso: 'productos.ver' },
+        loadComponent: () => import('./features/comercial/productos').then((m) => m.Productos)
+      },
+      {
+        path: 'notas',
+        title: 'Notas de crédito y débito · Nexo',
+        data: { permiso: 'notas.ver' },
+        loadComponent: () => import('./features/comercial/notas').then((m) => m.Notas)
+      },
+      {
         path: 'compras',
         title: 'Compras · Nexo',
         data: { permiso: 'compras.ver' },

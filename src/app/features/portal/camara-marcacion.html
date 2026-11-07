@@ -1,0 +1,78 @@
+<div class="velo" (click)="!enviando() && cancelar.emit()"></div>
+<section class="camara" role="dialog" aria-modal="true" aria-labelledby="titulo-camara">
+  <header>
+    <div>
+      <span class="etiqueta">{{ datos().tipo === 'ENTRADA' ? 'Marcar entrada' : 'Marcar salida' }}</span>
+      <h2 id="titulo-camara">{{ vistaPrevia() ? '¿Se ve bien?' : 'Tómate una foto' }}</h2>
+      <p>{{ vistaPrevia() ? 'Revisa que se vea tu rostro y que la ubicación sea correcta.' : 'Encuadra tu rostro. La foto lleva impresa tu ubicación, la fecha y la hora.' }}</p>
+    </div>
+    <button type="button" class="btn btn-fantasma btn-icono" [disabled]="enviando()" (click)="cancelar.emit()" aria-label="Cerrar">
+      <app-icon name="cerrar" />
+    </button>
+  </header>
+
+  <div class="visor">
+    <!-- El video siempre está en el DOM para no perder la cámara al pulsar «Repetir» -->
+    <video #video playsinline muted autoplay [class.oculto]="estado() !== 'lista' || vistaPrevia()"></video>
+
+    @if (vistaPrevia(); as url) {
+      <img class="previa" [src]="url" alt="Tu foto con la ubicación impresa" />
+    } @else {
+      @switch (estado()) {
+        @case ('iniciando') {
+          <div class="aviso"><span class="spinner"></span> Abriendo la cámara…</div>
+        }
+        @case ('error') {
+          <div class="aviso error">
+            <app-icon name="camara" [size]="30" />
+            <p>{{ error() }}</p>
+            <button type="button" class="btn btn-sm" (click)="iniciar()"><app-icon name="recargar" [size]="15" /> Reintentar</button>
+          </div>
+        }
+        @case ('lista') {
+          <div class="guia" aria-hidden="true"></div>
+          <!-- Vista previa del sello en vivo; el definitivo se dibuja sobre la foto al capturar -->
+          <div class="sello-vivo" [class.fuera]="!datos().dentro">
+            <div class="fila">
+              <span class="tipo" [class.salida]="datos().tipo === 'SALIDA'">{{ datos().tipo }}</span>
+              <strong class="num">{{ hora() }}</strong>
+            </div>
+            @if (datos().posicion; as p) {
+              <span class="mono">{{ p.lat | number: '1.6-6' }}, {{ p.lng | number: '1.6-6' }} · ±{{ p.precision | number: '1.0-0' }} m</span>
+              <span class="zona">
+                <app-icon [name]="datos().dentro ? 'checkCirculo' : 'alerta'" [size]="13" />
+                @if (datos().distancia !== null) {
+                  A {{ datos().distancia! | number: '1.0-0' }} m de {{ datos().sede.nombre }}
+                  {{ datos().dentro ? '· dentro de la zona' : '· fuera de la zona' }}
+                }
+              </span>
+              @if (direccion(); as dir) { <span class="dir">{{ dir }}</span> }
+            } @else {
+              <span class="zona"><span class="spinner"></span> Esperando tu ubicación…</span>
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <footer>
+    @if (vistaPrevia()) {
+      <button type="button" class="btn" [disabled]="enviando()" (click)="repetir()">
+        <app-icon name="recargar" [size]="16" /> Repetir
+      </button>
+      <button type="button" class="btn btn-primario" [disabled]="enviando()" (click)="enviar()">
+        @if (enviando()) {
+          <span class="spinner"></span> Verificando…
+        } @else {
+          <app-icon name="check" [size]="16" /> Marcar {{ datos().tipo === 'ENTRADA' ? 'entrada' : 'salida' }}
+        }
+      </button>
+    } @else {
+      <button type="button" class="obturador" [disabled]="estado() !== 'lista' || !datos().posicion" (click)="capturar()"
+        aria-label="Tomar foto">
+        <app-icon name="camara" [size]="26" />
+      </button>
+    }
+  </footer>
+</section>

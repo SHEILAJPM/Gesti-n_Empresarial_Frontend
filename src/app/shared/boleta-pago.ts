@@ -44,7 +44,10 @@ import { soles } from './formato';
         <div>
           <h3>Descuentos</h3>
           <p><span>{{ d.sistemaPension === 'ONP' ? 'ONP' : 'AFP ' + d.afp }} ({{ porcentaje(d.tasaPension) }})</span><span class="num">{{ soles(d.descuentoPension) }}</span></p>
-          <p class="total"><span>Total descuentos</span><span class="num">{{ soles(d.descuentoPension) }}</span></p>
+          @if (d.rentaQuinta > 0) {
+            <p><span>Renta de 5ta categoría</span><span class="num">{{ soles(d.rentaQuinta) }}</span></p>
+          }
+          <p class="total"><span>Total descuentos</span><span class="num">{{ soles(d.descuentoPension + d.rentaQuinta) }}</span></p>
         </div>
         <div>
           <h3>Aportes del empleador</h3>

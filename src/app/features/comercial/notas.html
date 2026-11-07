@@ -1,0 +1,204 @@
+<div class="pila">
+  <app-page-header seccion="Comercial" titulo="Notas de crédito y débito"
+    descripcion="Corrigen facturas y boletas ya aceptadas por SUNAT. Se emiten desde la venta con el botón «Nota»." >
+    <a class="btn" routerLink="/ventas"><app-icon name="recibo" [size]="17" /> Ir a ventas</a>
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Notas emitidas" [valor]="notas().length" icono="documento" [cargando]="cargando()" />
+    <app-stat-card style="--i: 1" titulo="Notas de crédito" [valor]="totalCredito()" formato="soles" icono="bajada" tono="alerta"
+      [cargando]="cargando()" detalle="restan a las ventas" />
+    <app-stat-card style="--i: 2" titulo="Notas de débito" [valor]="totalDebito()" formato="soles" icono="subida" tono="exito"
+      [cargando]="cargando()" detalle="suman a las ventas" />
+  </section>
+
+  <article class="card entrada">
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Buscar por número, comprobante, cliente o motivo…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+      <select #t class="control" [value]="filtroTipo()" (change)="filtroTipo.set(t.value); tabla.pagina.set(1)" aria-label="Tipo de nota">
+        <option value="">Crédito y débito</option>
+        <option value="CREDITO">Solo notas de crédito</option>
+        <option value="DEBITO">Solo notas de débito</option>
+      </select>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 44px"></div> }</div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Nota</th><th>Modifica a</th><th class="ocultar-movil">Motivo</th><th>Fecha</th><th class="right">Total</th><th>SUNAT</th><th class="right">Acciones</th></tr>
+          </thead>
+          <tbody>
+            @for (n of tabla.visibles(); track n.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td>
+                  <div class="celda-persona">
+                    <span class="badge" [class.badge-alerta]="n.tipo === 'CREDITO'" [class.badge-exito]="n.tipo === 'DEBITO'">{{ n.tipo === 'CREDITO' ? 'NC' : 'ND' }}</span>
+                    <strong class="mono">{{ n.numero }}</strong>
+                  </div>
+                </td>
+                <td><span class="mono">{{ n.numeroAfectado }}</span><small class="muted" style="display: block">{{ n.nombreCliente }}</small></td>
+                <td class="ocultar-movil ink-2">{{ n.motivo }}</td>
+                <td class="nowrap">{{ n.fecha | date: 'd MMM y' }}</td>
+                <td class="right num"><strong>{{ n.tipo === 'CREDITO' ? '− ' : '+ ' }}{{ soles(n.montoTotal) }}</strong></td>
+                <td>@let s = etiquetaSunat(n.sunat.estado); <span class="badge punto" [class]="s.clase">{{ s.texto }}</span></td>
+                <td class="right">
+                  <button type="button" class="btn btn-fantasma btn-sm" (click)="ver(n)"><app-icon name="documento" [size]="15" /> Ver</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="documento" [titulo]="notas().length ? 'Sin coincidencias' : 'Aún no hay notas'"
+        [texto]="notas().length ? 'Prueba con otro término.' : 'Para emitir una, ve a Ventas y pulsa «Nota» en el comprobante que quieres corregir.'" />
+    }
+  </article>
+</div>
+
+<!-- Emitir nota -->
+<app-panel [abierto]="!!ventaAfectada()" (cerrar)="cerrar()" etiqueta="Nota sobre {{ ventaAfectada()?.numeroComprobante }}"
+  [titulo]="tipo() === 'CREDITO' ? 'Nota de crédito' : 'Nota de débito'" [ancho]="640"
+  [descripcion]="(ventaAfectada()?.nombreCliente ?? '') + ' · comprobante por ' + soles(ventaAfectada()?.montoTotal ?? 0) + ' · saldo ' + soles(saldo())">
+  @if (ventaAfectada(); as v) {
+    <div class="pila" style="gap: 16px">
+      <div class="segmentado">
+        <span class="indicador" [style.width]="'calc(50% - 4px)'" [style.transform]="tipo() === 'DEBITO' ? 'translateX(100%)' : 'none'"></span>
+        <button type="button" [class.activo]="tipo() === 'CREDITO'" (click)="cambiarTipo('CREDITO')">Crédito (resta)</button>
+        <button type="button" [class.activo]="tipo() === 'DEBITO'" (click)="cambiarTipo('DEBITO')">Débito (suma)</button>
+      </div>
+
+      <div class="campo">
+        <label for="n-motivo">Motivo (SUNAT)</label>
+        <select id="n-motivo" class="control" [value]="motivo()" (change)="cambiarMotivo($any($event.target).value)">
+          @for (m of listaMotivos(); track m.codigo) { <option [value]="m.codigo">{{ m.codigo }} · {{ m.texto }}</option> }
+        </select>
+      </div>
+      <div class="campo">
+        <label for="n-sustento">Sustento</label>
+        <textarea id="n-sustento" class="control" rows="2" maxlength="250" placeholder="Ej. El cliente devolvió una laptop por falla de fábrica"
+          [value]="sustento()" (input)="sustento.set($any($event.target).value)"></textarea>
+      </div>
+
+      @if (esTotal()) {
+        <div class="aviso-total">
+          <app-icon name="info" [size]="16" />
+          <span>Revierte el comprobante completo: se copian sus {{ v.items.length || 1 }} líneas por {{ soles(v.montoTotal) }}.</span>
+        </div>
+      } @else {
+        <div class="seccion-detalle">
+          <strong>Líneas de la nota <span class="ayuda">(precios sin IGV; ajusta cantidades o montos)</span></strong>
+          @for (l of lineas(); track l.clave; let n = $index) {
+            <div class="linea">
+              <div class="linea-cabecera">
+                <span class="linea-num">{{ n + 1 }}</span>
+                <input class="control" [value]="l.descripcion" maxlength="250" aria-label="Descripción"
+                  (input)="cambiarLinea(l.clave, { descripcion: $any($event.target).value })" />
+                <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="quitarLinea(l.clave)" aria-label="Quitar"><app-icon name="eliminar" [size]="16" /></button>
+              </div>
+              <div class="linea-numeros">
+                <label>Cantidad <input type="number" class="control num" min="0" [value]="l.cantidad" (input)="cambiarLinea(l.clave, { cantidad: +$any($event.target).value })" /></label>
+                <label>Precio unit. <input type="number" class="control num" min="0" step="0.01" [value]="l.valorUnitario" (input)="cambiarLinea(l.clave, { valorUnitario: +$any($event.target).value })" /></label>
+                <label>Importe <span class="importe num">{{ soles(importe(l)) }}</span></label>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="desglose">
+        <div><span>Valor</span><span class="num">{{ soles(vistaPrevia().base) }}</span></div>
+        <div><span>IGV (18 %)</span><span class="num">{{ soles(vistaPrevia().igv) }}</span></div>
+        <div class="total"><span>Total de la nota</span><span class="num">{{ soles(vistaPrevia().total) }}</span></div>
+      </div>
+
+      @if (notasDeLaVenta().length) {
+        <p class="ayuda">Notas anteriores sobre este comprobante:
+          @for (n of notasDeLaVenta(); track n.id) { <span class="mono">{{ n.numero }}</span> ({{ n.tipo === 'CREDITO' ? '−' : '+' }}{{ soles(n.montoTotal) }}){{ $last ? '' : ', ' }} }
+        </p>
+      }
+      @if (problemas().length) {
+        <ul class="problemas">@for (p of problemas(); track p) { <li><app-icon name="alerta" [size]="14" /> {{ p }}</li> }</ul>
+      }
+    </div>
+  }
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="cerrar()">Cancelar</button>
+    <button type="button" class="btn btn-primario" [disabled]="emitiendo() || problemas().length > 0" (click)="emitir()">
+      @if (emitiendo()) { <span class="spinner"></span> Emitiendo… } @else { <app-icon name="check" [size]="17" /> Emitir nota }
+    </button>
+  </ng-container>
+</app-panel>
+
+<!-- Ver / imprimir nota -->
+<app-panel [abierto]="!!vista()" (cerrar)="vista.set(null)" etiqueta="Comprobante" [titulo]="vista()?.numero ?? ''" [ancho]="720"
+  [descripcion]="'Modifica a ' + (vista()?.numeroAfectado ?? '')">
+  @if (vista(); as n) {
+    @if (cargandoVista()) {
+      <div class="pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 60px"></div> }</div>
+    } @else {
+      <div class="comprobante imprimible">
+        <header class="comp-cabecera">
+          <div>
+            <strong class="comp-emisor">{{ facturacion()?.emisorRazonSocial || 'Empresa emisora' }}</strong>
+            <span>RUC {{ facturacion()?.emisorRuc || '—' }}</span>
+          </div>
+          <div class="comp-recuadro">
+            <span>RUC {{ facturacion()?.emisorRuc || '—' }}</span>
+            <strong>{{ n.tipo === 'CREDITO' ? 'NOTA DE CRÉDITO ELECTRÓNICA' : 'NOTA DE DÉBITO ELECTRÓNICA' }}</strong>
+            <span class="mono">{{ n.numero }}</span>
+          </div>
+        </header>
+        <dl class="comp-datos">
+          <div><dt>{{ n.tipoComprobanteAfectado === 'FACTURA' ? 'Razón social' : 'Cliente' }}</dt><dd>{{ n.nombreCliente }}</dd></div>
+          <div><dt>{{ n.tipoComprobanteAfectado === 'FACTURA' ? 'RUC' : 'DNI' }}</dt><dd class="mono">{{ n.documentoCliente }}</dd></div>
+          <div><dt>Fecha de emisión</dt><dd>{{ n.fecha | date: 'dd/MM/yyyy' }}</dd></div>
+          <div><dt>Documento que modifica</dt><dd class="mono">{{ n.tipoComprobanteAfectado === 'FACTURA' ? 'Factura' : 'Boleta' }} {{ n.numeroAfectado }}</dd></div>
+          <div><dt>Motivo</dt><dd>{{ n.motivoCodigo }} · {{ n.motivo }}</dd></div>
+          <div><dt>Sustento</dt><dd>{{ n.sustento }}</dd></div>
+        </dl>
+        <table class="comp-items">
+          <thead><tr><th>Cant.</th><th>Unidad</th><th>Descripción</th><th class="right">P. unit.</th><th class="right">Importe</th></tr></thead>
+          <tbody>
+            @for (i of n.items; track i.orden) {
+              <tr>
+                <td class="num">{{ i.cantidad }}</td><td>{{ unidades()[i.unidad] ?? i.unidad }}</td>
+                <td>@if (i.codigo) { <span class="mono muted">{{ i.codigo }} · </span> }{{ i.descripcion }}</td>
+                <td class="right num">{{ soles(i.valorUnitario) }}</td><td class="right num">{{ soles(i.valorVenta) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <div class="comp-pie">
+          <div class="comp-notas">@if (n.montoEnLetras) { <p><strong>{{ n.montoEnLetras }}</strong></p> }</div>
+          <dl class="comp-totales">
+            <div><dt>Op. gravada</dt><dd class="num">{{ soles(n.montoSinIgv) }}</dd></div>
+            <div><dt>IGV</dt><dd class="num">{{ soles(n.igv) }}</dd></div>
+            <div class="total"><dt>Importe total</dt><dd class="num">{{ soles(n.montoTotal) }}</dd></div>
+          </dl>
+        </div>
+        <footer class="comp-legal">
+          Representación impresa de la nota de {{ n.tipo === 'CREDITO' ? 'crédito' : 'débito' }} electrónica.
+          @if (n.sunat.estado === 'ACEPTADO') { Aceptada por SUNAT. } @else { Estado en SUNAT: {{ etiquetaSunat(n.sunat.estado).texto }}. }
+        </footer>
+      </div>
+    }
+  }
+  <ng-container ngProjectAs="[pie]">
+    @if (vista(); as n) {
+      @if (puedeEmitir && ['NO_ENVIADO', 'ERROR', 'RECHAZADO', 'EXCEPCION'].includes(n.sunat.estado)) {
+        <button type="button" class="btn" (click)="reenviar(n)"><app-icon name="flecha" [size]="16" /> Reenviar a SUNAT</button>
+      }
+      @if (n.sunat.pdfUrl) { <a class="btn" [href]="n.sunat.pdfUrl" target="_blank" rel="noopener"><app-icon name="documento" [size]="16" /> PDF de SUNAT</a> }
+      <button type="button" class="btn btn-primario" [disabled]="cargandoVista()" (click)="imprimir()"><app-icon name="documento" [size]="16" /> Imprimir</button>
+    }
+  </ng-container>
+</app-panel>

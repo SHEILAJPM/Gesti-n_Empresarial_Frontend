@@ -1,0 +1,170 @@
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 15, 26, 0.55);
+  backdrop-filter: blur(3px);
+  animation: aparecer 0.2s ease both;
+}
+
+// Escritorio: tarjeta centrada. Celular: pantalla completa.
+.camara {
+  position: fixed;
+  z-index: 61;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: escalar-entrada 0.35s var(--ease-spring) both;
+
+  @media (max-width: 600px) {
+    height: 100dvh;
+    width: 100vw;
+    max-height: none;
+    border-radius: 0;
+    border: 0;
+  }
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  .etiqueta { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brand); }
+  h2 { font-size: 19px; margin: 2px 0 4px; }
+  p { font-size: 13px; color: var(--ink-3); }
+}
+
+.visor {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: 3 / 4;
+  max-height: 62dvh;
+  margin: 0 20px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0b1220;
+
+  @media (max-width: 600px) {
+    margin: 0;
+    border-radius: 0;
+    aspect-ratio: auto;
+    max-height: none;
+  }
+}
+
+video, .previa {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Espejo solo en pantalla, como en cualquier cámara frontal; la foto se guarda sin invertir
+video { transform: scaleX(-1); }
+video.oculto { visibility: hidden; }
+.previa { object-fit: contain; background: #000; }
+
+.aviso {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: #cbd5e1;
+  font-size: 14px;
+  &.error { color: #fecaca; }
+  p { max-width: 320px; line-height: 1.45; }
+}
+
+// Óvalo para encuadrar el rostro
+.guia {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 52%;
+  aspect-ratio: 3 / 4;
+  transform: translate(-50%, -50%);
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.sello-vivo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 28px 14px 12px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.78) 35%);
+  color: #fff;
+  font-size: 12.5px;
+  text-align: left;
+
+  .fila { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  strong { font-size: 20px; font-weight: 700; }
+  .tipo {
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #16a34a;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    &.salida { background: #c2410c; }
+  }
+  .mono { color: #e2e8f0; }
+  .zona { display: flex; align-items: center; gap: 5px; color: #86efac; font-weight: 600; }
+  &.fuera .zona { color: #fca5a5; }
+  .dir { color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spinner { width: 13px; height: 13px; border-width: 2px; }
+}
+
+footer {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 20px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  .btn { flex: 1; height: 46px; }
+}
+
+.obturador {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 4px solid var(--surface);
+  outline: 3px solid var(--brand);
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-spring), filter 0.2s ease;
+  &:hover:not(:disabled) { transform: scale(1.06); }
+  &:active:not(:disabled) { transform: scale(0.92); }
+  &:disabled { filter: grayscale(0.7); opacity: 0.55; cursor: not-allowed; }
+}
+
+@keyframes aparecer {
+  from { opacity: 0; }
+}

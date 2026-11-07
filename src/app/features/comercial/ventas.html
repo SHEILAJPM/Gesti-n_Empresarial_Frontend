@@ -65,7 +65,7 @@
               <th class="right ordenable" (click)="tabla.ordenarPor('montoTotal')">Total {{ tabla.flecha('montoTotal') }}</th>
               <th>Estado</th>
               <th>SUNAT</th>
-              @if (puedeAnular) { <th class="right">Acciones</th> }
+              <th class="right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -102,15 +102,22 @@
                     {{ s.texto }}
                   </button>
                 </td>
-                @if (puedeAnular) {
-                  <td>
-                    <div class="acciones">
-                      @if (v.estado === 'EMITIDA') {
-                        <button type="button" class="btn btn-fantasma btn-sm" (click)="anular(v)"><app-icon name="anular" [size]="15" /> Anular</button>
-                      }
-                    </div>
-                  </td>
-                }
+                <td>
+                  <div class="acciones" style="opacity: 1">
+                    <button type="button" class="btn btn-fantasma btn-sm" (click)="verComprobante(v)" title="Ver e imprimir el comprobante">
+                      <app-icon name="documento" [size]="15" /> Ver
+                    </button>
+                    @if (puedeNotas && v.estado === 'EMITIDA' && v.sunat.estado === 'ACEPTADO') {
+                      <a class="btn btn-fantasma btn-sm" routerLink="/notas" [queryParams]="{ venta: v.id }"
+                        title="Nota de crédito o débito: devoluciones, descuentos, anulación, intereses">
+                        <app-icon name="editar" [size]="15" /> Nota
+                      </a>
+                    }
+                    @if (puedeAnular && v.estado === 'EMITIDA') {
+                      <button type="button" class="btn btn-fantasma btn-sm" (click)="anular(v)"><app-icon name="anular" [size]="15" /> Anular</button>
+                    }
+                  </div>
+                </td>
               </tr>
             }
           </tbody>
@@ -181,7 +188,7 @@
   </ng-container>
 </app-panel>
 
-<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Comercial" titulo="Nueva venta"
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Comercial" titulo="Nueva venta" [ancho]="640"
   descripcion="El tipo de comprobante depende del cliente: RUC → factura, DNI → boleta.">
   <form id="form-venta" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
     <div class="campo completo">
@@ -216,22 +223,201 @@
       <input id="v-fecha" type="date" class="control" formControlName="fecha" [max]="hoy" />
       <app-error-campo [control]="form.controls.fecha" />
     </div>
-    <div class="campo completo">
-      <label for="v-monto">Monto sin IGV (S/)</label>
-      <input id="v-monto" type="number" step="0.01" min="0" class="control num" formControlName="montoSinIgv" />
-      <app-error-campo [control]="form.controls.montoSinIgv" [mensajes]="{ min: 'El monto debe ser mayor a cero.' }" />
+    <!-- Detalle: productos o servicios -->
+    <div class="completo seccion-detalle">
+      <div class="seccion-titulo">
+        <strong>Detalle</strong>
+        <span class="ayuda">Precios sin IGV. <a routerLink="/productos">Administrar catálogo</a></span>
+      </div>
+      @for (l of lineas(); track l.clave; let n = $index) {
+        <div class="linea">
+          <div class="linea-cabecera">
+            <span class="linea-num">{{ n + 1 }}</span>
+            <select class="control" [value]="l.productoId ?? ''" (change)="elegirProducto(l.clave, $any($event.target).value)"
+              aria-label="Producto del catálogo">
+              <option value="">— Escribir a mano —</option>
+              @for (p of productosActivos(); track p.id) {
+                <option [value]="p.id">{{ p.codigo }} · {{ p.descripcion }}</option>
+              }
+            </select>
+            <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="quitarLinea(l.clave)" aria-label="Quitar línea">
+              <app-icon name="eliminar" [size]="16" />
+            </button>
+          </div>
+          <input class="control" placeholder="Descripción que saldrá en el comprobante" maxlength="250" [value]="l.descripcion"
+            (input)="cambiarLinea(l.clave, { descripcion: $any($event.target).value })" aria-label="Descripción" />
+          <div class="linea-numeros">
+            <label>Cantidad
+              <input type="number" class="control num" min="0" step="1" [value]="l.cantidad"
+                (input)="cambiarLinea(l.clave, { cantidad: +$any($event.target).value })" />
+            </label>
+            <label>Unidad
+              <select class="control" [value]="l.unidad" (change)="cambiarLinea(l.clave, { unidad: $any($event.target).value })">
+                @for (u of listaUnidades(); track u.codigo) { <option [value]="u.codigo">{{ u.nombre }}</option> }
+              </select>
+            </label>
+            <label>Precio unit.
+              <input type="number" class="control num" min="0" step="0.01" [value]="l.valorUnitario"
+                (input)="cambiarLinea(l.clave, { valorUnitario: +$any($event.target).value })" />
+            </label>
+            <label>Importe
+              <span class="importe num">{{ soles(importe(l)) }}</span>
+            </label>
+          </div>
+        </div>
+      }
+      <button type="button" class="btn btn-sm" (click)="agregarLinea()"><app-icon name="mas" [size]="15" /> Agregar línea</button>
     </div>
 
     <div class="completo desglose">
-      <div><span>Base imponible</span><span class="num">{{ soles(vistaPrevia().base) }}</span></div>
+      <div><span>Op. gravada</span><span class="num">{{ soles(vistaPrevia().base) }}</span></div>
       <div><span>IGV (18 %)</span><span class="num">{{ soles(vistaPrevia().igv) }}</span></div>
       <div class="total"><span>Total a cobrar</span><span class="num">{{ soles(vistaPrevia().total) }}</span></div>
     </div>
+
+    <!-- Forma de pago -->
+    <div class="campo completo">
+      <label>Forma de pago</label>
+      <div class="segmentado">
+        <span class="indicador" [style.width]="'calc(50% - 4px)'" [style.transform]="formaPago() === 'CREDITO' ? 'translateX(100%)' : 'none'"></span>
+        <button type="button" [class.activo]="formaPago() === 'CONTADO'" (click)="cambiarFormaPago('CONTADO')">Contado</button>
+        <button type="button" [class.activo]="formaPago() === 'CREDITO'" (click)="cambiarFormaPago('CREDITO')"
+          [disabled]="tipoComprobante() !== 'FACTURA'" [title]="tipoComprobante() !== 'FACTURA' ? 'Solo facturas (cliente con RUC)' : ''">Crédito</button>
+      </div>
+    </div>
+    @if (formaPago() === 'CREDITO') {
+      <div class="completo seccion-detalle">
+        <div class="repartir">
+          <label>Cuotas
+            <input type="number" class="control num" min="1" max="36" [value]="numeroCuotas()" (input)="numeroCuotas.set(+$any($event.target).value)" />
+          </label>
+          <button type="button" class="btn btn-sm" (click)="repartirCuotas()"><app-icon name="calendario" [size]="15" /> Repartir mensual</button>
+        </div>
+        @for (c of cuotas(); track c.clave; let n = $index) {
+          <div class="cuota">
+            <span class="linea-num">{{ n + 1 }}</span>
+            <input type="date" class="control" [value]="c.fechaVencimiento" [min]="form.getRawValue().fecha"
+              (change)="cambiarCuota(c.clave, { fechaVencimiento: $any($event.target).value })" aria-label="Vence" />
+            <input type="number" class="control num" min="0" step="0.01" [value]="c.monto"
+              (input)="cambiarCuota(c.clave, { monto: +$any($event.target).value })" aria-label="Monto" />
+          </div>
+        }
+        <span class="ayuda" [class.text-danger]="sumaCuotas() !== vistaPrevia().total">
+          Suman {{ soles(sumaCuotas()) }} de {{ soles(vistaPrevia().total) }}
+        </span>
+      </div>
+    }
+
+    <div class="campo completo">
+      <label for="v-obs">Observaciones <span class="muted">(opcional)</span></label>
+      <textarea id="v-obs" class="control" maxlength="250" rows="2" placeholder="Ej. Orden de compra 123, entrega en tienda"
+        [value]="observaciones()" (input)="observaciones.set($any($event.target).value)"></textarea>
+    </div>
+
+    @if (problemas().length) {
+      <ul class="completo problemas">
+        @for (p of problemas(); track p) { <li><app-icon name="alerta" [size]="14" /> {{ p }}</li> }
+      </ul>
+    }
   </form>
   <ng-container ngProjectAs="[pie]">
     <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
     <button type="submit" form="form-venta" class="btn btn-primario" [disabled]="guardando()">
       @if (guardando()) { <span class="spinner"></span> Emitiendo… } @else { <app-icon name="check" [size]="17" /> Emitir comprobante }
     </button>
+  </ng-container>
+</app-panel>
+
+<!-- Comprobante: vista e impresión (al imprimir solo sale este bloque) -->
+<app-panel [abierto]="!!comprobante()" (cerrar)="comprobante.set(null)" etiqueta="Comprobante"
+  [titulo]="comprobante()?.numeroComprobante ?? ''" [ancho]="720"
+  [descripcion]="comprobante()?.estado === 'ANULADA' ? 'Comprobante anulado' : 'Representación impresa del comprobante electrónico'">
+  @if (comprobante(); as v) {
+    @if (cargandoComprobante()) {
+      <div class="pila">@for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 60px"></div> }</div>
+    } @else {
+      <div class="comprobante imprimible" [class.anulado]="v.estado === 'ANULADA'">
+        <header class="comp-cabecera">
+          <div>
+            <strong class="comp-emisor">{{ facturacion()?.emisorRazonSocial || 'Empresa emisora' }}</strong>
+            <span>RUC {{ facturacion()?.emisorRuc || '—' }}</span>
+          </div>
+          <div class="comp-recuadro">
+            <span>RUC {{ facturacion()?.emisorRuc || '—' }}</span>
+            <strong>{{ v.tipoComprobante === 'FACTURA' ? 'FACTURA ELECTRÓNICA' : 'BOLETA DE VENTA ELECTRÓNICA' }}</strong>
+            <span class="mono">{{ v.numeroComprobante }}</span>
+          </div>
+        </header>
+
+        <dl class="comp-datos">
+          <div><dt>{{ v.tipoComprobante === 'FACTURA' ? 'Razón social' : 'Cliente' }}</dt><dd>{{ v.nombreCliente }}</dd></div>
+          <div><dt>{{ v.tipoComprobante === 'FACTURA' ? 'RUC' : 'DNI' }}</dt><dd class="mono">{{ v.documentoCliente }}</dd></div>
+          <div><dt>Fecha de emisión</dt><dd>{{ v.fecha | date: 'dd/MM/yyyy' }}</dd></div>
+          <div><dt>Forma de pago</dt><dd>{{ v.formaPago === 'CREDITO' ? 'Crédito' : 'Contado' }}</dd></div>
+          <div><dt>Moneda</dt><dd>Soles (PEN)</dd></div>
+        </dl>
+
+        <table class="comp-items">
+          <thead>
+            <tr><th>Cant.</th><th>Unidad</th><th>Descripción</th><th class="right">P. unit.</th><th class="right">Importe</th></tr>
+          </thead>
+          <tbody>
+            @if (v.items.length) {
+              @for (i of v.items; track i.orden) {
+                <tr>
+                  <td class="num">{{ i.cantidad }}</td>
+                  <td>{{ unidades()[i.unidad] ?? i.unidad }}</td>
+                  <td>@if (i.codigo) { <span class="mono muted">{{ i.codigo }} · </span> }{{ i.descripcion }}</td>
+                  <td class="right num">{{ soles(i.valorUnitario) }}</td>
+                  <td class="right num">{{ soles(i.valorVenta) }}</td>
+                </tr>
+              }
+            } @else {
+              <!-- Ventas registradas antes del detalle por líneas -->
+              <tr>
+                <td class="num">1</td><td>Servicio</td><td>Venta de bienes y/o servicios</td>
+                <td class="right num">{{ soles(v.montoSinIgv) }}</td><td class="right num">{{ soles(v.montoSinIgv) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="comp-pie">
+          <div class="comp-notas">
+            @if (v.montoEnLetras) { <p><strong>{{ v.montoEnLetras }}</strong></p> }
+            @if (v.observaciones) { <p><strong>Observaciones:</strong> {{ v.observaciones }}</p> }
+            @if (v.cuotas.length) {
+              <p><strong>Cuotas</strong></p>
+              <table class="comp-cuotas">
+                @for (c of v.cuotas; track c.numero) {
+                  <tr><td>Cuota {{ c.numero }}</td><td>{{ c.fechaVencimiento | date: 'dd/MM/yyyy' }}</td><td class="right num">{{ soles(c.monto) }}</td></tr>
+                }
+              </table>
+            }
+          </div>
+          <dl class="comp-totales">
+            <div><dt>Op. gravada</dt><dd class="num">{{ soles(v.montoSinIgv) }}</dd></div>
+            <div><dt>IGV ({{ v.tasaAplicada * 100 }} %)</dt><dd class="num">{{ soles(v.igv) }}</dd></div>
+            <div class="total"><dt>Importe total</dt><dd class="num">{{ soles(v.montoTotal) }}</dd></div>
+          </dl>
+        </div>
+
+        <footer class="comp-legal">
+          Representación impresa de la {{ v.tipoComprobante === 'FACTURA' ? 'factura' : 'boleta de venta' }} electrónica.
+          @if (v.sunat.estado === 'ACEPTADO') { Aceptada por SUNAT. } @else { Estado en SUNAT: {{ etiquetaSunat(v.sunat.estado).texto }}. }
+        </footer>
+        @if (v.estado === 'ANULADA') { <div class="sello-anulado">ANULADO</div> }
+      </div>
+    }
+  }
+  <ng-container ngProjectAs="[pie]">
+    @if (comprobante(); as v) {
+      @if (v.sunat.pdfUrl) {
+        <a class="btn" [href]="v.sunat.pdfUrl" target="_blank" rel="noopener"><app-icon name="documento" [size]="16" /> PDF de SUNAT</a>
+      }
+      <button type="button" class="btn btn-primario" [disabled]="cargandoComprobante()" (click)="imprimir()">
+        <app-icon name="documento" [size]="16" /> Imprimir
+      </button>
+    }
   </ng-container>
 </app-panel>

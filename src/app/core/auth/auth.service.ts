@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -8,8 +8,16 @@ import { Permiso, rolPuede } from './permisos';
 
 const CLAVE_SESION = 'nexo-sesion';
 
-/* Hoy el backend usa HTTP Basic: el "token" son las credenciales en Base64.
-   Al pasar a JWT solo cambia iniciarSesion(); el resto de la app no se entera. */
+export interface RespuestaLogin {
+  usuario: string;
+  rol: Rol;
+  trabajadorId: number | null;
+  token: string;
+  expiraEn: string;
+}
+
+/* La sesión es un JWT que entrega POST /api/auth/login. La contraseña solo viaja al iniciar sesión:
+   el navegador guarda el token (que vence), nunca la clave. */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -24,19 +32,42 @@ export class AuthService {
   readonly tieneFicha = computed(() => !!this.sesionActual()?.trabajadorId);
 
   async iniciarSesion(usuario: string, clave: string): Promise<void> {
-    const token = base64(`${usuario}:${clave}`);
     const datos = await firstValueFrom(
-      this.http.get<{ usuario: string; rol: Rol; trabajadorId: number | null }>(`${API_URL}/api/auth/me`, {
-        headers: new HttpHeaders({ Authorization: `Basic ${token}` })
-      })
+      this.http.post<RespuestaLogin>(`${API_URL}/api/auth/login`, { usuario, clave })
     );
-    const sesion: Sesion = { usuario: datos.usuario, rol: datos.rol, token, trabajadorId: datos.trabajadorId ?? null };
+    this.guardar(datos);
+  }
+
+  /* Tras cambiar la contraseña el backend entrega un token nuevo (los anteriores dejan de servir) */
+  renovar(datos: RespuestaLogin): void {
+    this.guardar(datos);
+  }
+
+  private guardar(datos: RespuestaLogin): void {
+    const sesion: Sesion = {
+      usuario: datos.usuario,
+      rol: datos.rol,
+      token: datos.token,
+      expiraEn: datos.expiraEn,
+      trabajadorId: datos.trabajadorId ?? null
+    };
     try {
       sessionStorage.setItem(CLAVE_SESION, JSON.stringify(sesion));
     } catch {
       /* sin almacenamiento la sesión dura hasta recargar */
     }
     this.sesionActual.set(sesion);
+  }
+
+  /* Token vigente o null si ya venció (entonces se cierra la sesión) */
+  tokenVigente(): string | null {
+    const sesion = this.sesionActual();
+    if (!sesion) return null;
+    if (vencida(sesion)) {
+      this.cerrarSesion('expirada');
+      return null;
+    }
+    return sesion.token;
   }
 
   cerrarSesion(motivo?: 'expirada'): void {
@@ -54,16 +85,21 @@ export class AuthService {
   }
 }
 
+function vencida(sesion: Sesion): boolean {
+  return !sesion.expiraEn || Date.parse(sesion.expiraEn) <= Date.now();
+}
+
+/* Una sesión guardada sin vencimiento es de la versión anterior (HTTP Basic): se descarta */
 function leerSesion(): Sesion | null {
   try {
     const guardada = sessionStorage.getItem(CLAVE_SESION);
-    return guardada ? (JSON.parse(guardada) as Sesion) : null;
+    const sesion = guardada ? (JSON.parse(guardada) as Sesion) : null;
+    if (sesion && vencida(sesion)) {
+      sessionStorage.removeItem(CLAVE_SESION);
+      return null;
+    }
+    return sesion;
   } catch {
     return null;
   }
-}
-
-function base64(texto: string): string {
-  const bytes = new TextEncoder().encode(texto);
-  return btoa(String.fromCharCode(...bytes));
 }

@@ -57,16 +57,82 @@
 
         <p class="proximo">
           <app-icon name="ubicacion" [size]="15" />
-          Próxima fase: cada trabajador marcará desde su celular y el sistema validará que esté dentro del radio de la sede (GPS).
+          Este registro es manual. Desde su celular, cada trabajador marca solo si está dentro del radio de la sede y se toma una foto con la ubicación impresa.
         </p>
       </div>
     </article>
 
     <article class="card entrada">
+      <nav class="pestanas" aria-label="Registros de asistencia">
+        <button type="button" [class.activa]="pestana() === 'marcaciones'" (click)="cambiarPestana('marcaciones')">
+          Marcaciones <span class="contador num">{{ tabla.filtradas().length }}</span>
+        </button>
+        <button type="button" [class.activa]="pestana() === 'intentos'" (click)="cambiarPestana('intentos')">
+          Intentos rechazados <span class="contador num">{{ tablaIntentos.filtradas().length }}</span>
+        </button>
+        <button type="button" [class.activa]="pestana() === 'resumen'" (click)="cambiarPestana('resumen')">
+          Resumen del mes
+        </button>
+      </nav>
+      @if (pestana() === 'resumen') {
+        <div class="filtros">
+          <input #mes type="month" class="control" style="width: auto" [value]="mesResumen()" [max]="mesActual"
+            (change)="mes.value && cargarResumen(mes.value)" aria-label="Mes" />
+          @if (resumen(); as r) {
+            <span class="ayuda">Entrada {{ r.horaEntrada.slice(0, 5) }} · tolerancia {{ r.toleranciaMinutos }} min · lunes a viernes</span>
+          }
+          <button type="button" class="btn btn-sm" style="margin-left: auto" [disabled]="!resumen()?.trabajadores?.length" (click)="descargarCsv()">
+            <app-icon name="bajada" [size]="15" /> Descargar CSV
+          </button>
+        </div>
+        @if (cargandoResumen()) {
+          <div class="card-cuerpo pila">
+            @for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 44px"></div> }
+          </div>
+        } @else if (resumen()?.trabajadores?.length) {
+          <div class="tabla-contenedor">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th>Trabajador</th><th class="right">Asistió</th><th class="right">Faltas</th><th class="right">Tardanzas</th>
+                  <th class="right ocultar-movil">Horas</th><th class="right ocultar-movil">Sin salida</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of resumen()!.trabajadores; track f.trabajadorId; let n = $index) {
+                  <tr [style.--i]="n">
+                    <td>
+                      <div class="celda-persona">
+                        <span class="avatar" [style.background]="colorAvatar(f.nombres)">{{ iniciales(f.nombres) }}</span>
+                        <div><strong>{{ f.nombres }}</strong><small>{{ f.area }}</small></div>
+                      </div>
+                    </td>
+                    <td class="right num">{{ f.diasAsistidos }}<span class="muted">/{{ f.diasLaborables }}</span></td>
+                    <td class="right num"><span [class.text-danger]="f.faltas > 0">{{ f.faltas }}</span></td>
+                    <td class="right num">
+                      <span [class.text-alerta]="f.tardanzas > 0">{{ f.tardanzas }}</span>
+                      @if (f.minutosTardanza) { <small class="muted" style="display: block">{{ f.minutosTardanza }} min</small> }
+                    </td>
+                    <td class="right num ocultar-movil">{{ f.horasTrabajadas }} h</td>
+                    <td class="right num ocultar-movil"><span [class.text-alerta]="f.diasSinSalida > 0">{{ f.diasSinSalida }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="ayuda nota-resumen">«Sin salida»: días en que marcó la entrada pero no la salida (no suman horas). Los feriados no se descuentan.</p>
+        } @else {
+          <app-vacio icono="calendario" titulo="Sin datos" texto="No hay trabajadores en planilla para este mes." />
+        }
+      } @else {
       <div class="filtros">
         <div class="control-icono busqueda">
           <app-icon name="buscar" [size]="16" />
-          <input #b class="control" placeholder="Buscar trabajador o DNI…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+          @if (pestana() === 'marcaciones') {
+            <input #b class="control" placeholder="Buscar trabajador o DNI…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+          } @else {
+            <input #bi class="control" placeholder="Buscar trabajador…" [value]="tablaIntentos.busqueda()" (input)="tablaIntentos.buscar(bi.value)" />
+          }
         </div>
         <input #f type="date" class="control" style="width: auto" [value]="filtroFecha()" (change)="filtroFecha.set(f.value); tabla.pagina.set(1)" aria-label="Fecha" />
         <select #t class="control" [value]="filtroTipo()" (change)="filtroTipo.set(t.value); tabla.pagina.set(1)" aria-label="Tipo">
@@ -78,16 +144,55 @@
           <button type="button" class="btn btn-sm btn-fantasma" (click)="filtroFecha.set(''); tabla.pagina.set(1)">Ver todas las fechas</button>
         }
       </div>
+      }
 
-      @if (cargando()) {
+      @if (pestana() === 'resumen') {
+        <!-- El resumen se dibuja arriba -->
+      } @else if (cargando()) {
         <div class="card-cuerpo pila">
           @for (i of [1, 2, 3, 4, 5]; track i) { <div class="skeleton" style="height: 44px"></div> }
         </div>
+      } @else if (pestana() === 'intentos') {
+        @if (tablaIntentos.filtradas().length) {
+          <div class="tabla-contenedor">
+            <table class="tabla">
+              <thead>
+                <tr><th>Trabajador</th><th class="ocultar-movil">Tipo</th><th>Motivo</th><th class="right">Distancia</th><th class="right">Hora</th><th class="right">Foto</th></tr>
+              </thead>
+              <tbody>
+                @for (i of tablaIntentos.visibles(); track i.id; let n = $index) {
+                  <tr [style.--i]="n">
+                    <td>
+                      <div class="celda-persona">
+                        <span class="avatar" [style.background]="colorAvatar(i.nombres)">{{ iniciales(i.nombres) }}</span>
+                        <div><strong>{{ i.nombres }}</strong><small>{{ i.fechaHora | date: 'EEE d MMM y' }}</small></div>
+                      </div>
+                    </td>
+                    <td class="ocultar-movil"><span class="badge punto badge-peligro">{{ i.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}</span></td>
+                    <td class="motivo ink-2" [title]="i.motivo">{{ i.motivo }}</td>
+                    <td class="right num">{{ i.distanciaMetros | number: '1.0-0' }} m</td>
+                    <td class="right num">{{ i.fechaHora | date: 'HH:mm:ss' }}</td>
+                    <td class="right">
+                      @if (i.fotoId) {
+                        <button type="button" class="btn btn-sm btn-fantasma" (click)="verIntento(i)"><app-icon name="camara" [size]="15" /> Ver</button>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <app-paginador [pagina]="tablaIntentos.pagina()" [paginas]="tablaIntentos.paginas()" [total]="tablaIntentos.filtradas().length"
+            [tamano]="tablaIntentos.tamano" (cambiar)="tablaIntentos.pagina.set($event)" />
+        } @else {
+          <app-vacio icono="checkCirculo" titulo="Sin intentos rechazados"
+            [texto]="filtroFecha() ? 'Nadie intentó marcar fuera de la zona en esta fecha.' : 'Nadie intentó marcar fuera de la zona.'" />
+        }
       } @else if (tabla.filtradas().length) {
         <div class="tabla-contenedor">
           <table class="tabla">
             <thead>
-              <tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th class="right">Hora</th></tr>
+              <tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th class="right">Hora</th><th class="right">Evidencia</th></tr>
             </thead>
             <tbody>
               @for (m of tabla.visibles(); track m.id; let i = $index) {
@@ -105,6 +210,15 @@
                   </td>
                   <td>{{ m.fechaHora | date: 'EEE d MMM y' }}</td>
                   <td class="right num">{{ m.fechaHora | date: 'HH:mm:ss' }}</td>
+                  <td class="right">
+                    @if (m.fotoId) {
+                      <button type="button" class="btn btn-sm btn-fantasma" (click)="verMarcacion(m)">
+                        <app-icon name="camara" [size]="15" /> {{ m.distanciaMetros | number: '1.0-0' }} m
+                      </button>
+                    } @else {
+                      <span class="muted">{{ m.origen === 'RRHH' ? 'Manual' : '—' }}</span>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -119,3 +233,33 @@
     </article>
   </div>
 </div>
+
+<app-panel [abierto]="!!evidencia()" (cerrar)="evidencia.set(null)"
+  [etiqueta]="evidencia()?.motivo ? 'Intento rechazado' : 'Marcación desde el celular'"
+  [titulo]="evidencia()?.nombre ?? ''"
+  [descripcion]="(evidencia()?.fechaHora | date: 'EEEE d \'de\' MMMM y, HH:mm:ss') ?? ''">
+  @if (evidencia(); as e) {
+    <div class="pila evidencia">
+      <app-foto-asistencia [fotoId]="e.fotoId" [alt]="'Foto de ' + e.nombre" />
+      @if (e.motivo) {
+        <div class="motivo-rechazo"><app-icon name="alerta" [size]="16" /> {{ e.motivo }}</div>
+      }
+      <dl class="datos">
+        <div><dt>Tipo</dt><dd>{{ e.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}</dd></div>
+        <div><dt>Hora del servidor</dt><dd class="num">{{ e.fechaHora | date: 'HH:mm:ss' }}</dd></div>
+        <div><dt>Distancia a la sede</dt><dd class="num">{{ e.distancia !== null ? (e.distancia | number: '1.0-0') + ' m' : '—' }}</dd></div>
+        <div><dt>Precisión del GPS</dt><dd class="num">{{ e.precision !== null ? '±' + (e.precision | number: '1.0-0') + ' m' : '—' }}</dd></div>
+        @if (e.latitud !== null && e.longitud !== null) {
+          <div class="completo">
+            <dt>Coordenadas</dt>
+            <dd class="mono">
+              {{ e.latitud | number: '1.6-6' }}, {{ e.longitud | number: '1.6-6' }}
+              <a [href]="enMapa(e)" target="_blank" rel="noopener">Ver en el mapa</a>
+            </dd>
+          </div>
+        }
+      </dl>
+      <p class="ayuda">Los datos de esta lista son los que registró el servidor. El texto impreso en la foto lo genera el celular.</p>
+    </div>
+  }
+</app-panel>

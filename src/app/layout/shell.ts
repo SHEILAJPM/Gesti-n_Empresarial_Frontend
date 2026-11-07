@@ -8,13 +8,14 @@ import { SISTEMA } from '../core/config/constantes';
 import { ItemMenu, MENU } from '../core/config/navegacion';
 import { ThemeService } from '../core/ui/theme.service';
 import { colorAvatar, iniciales, sinTildes } from '../shared/formato';
+import { CambiarClave } from '../shared/cambiar-clave';
 import { Icon } from '../shared/icon';
 
 const CLAVE_COLAPSADO = 'nexo-menu-colapsado';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon, CambiarClave],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -33,6 +34,7 @@ export class Shell {
   protected readonly colapsado = signal(leerColapsado());
   protected readonly menuMovil = signal(false);
   protected readonly menuUsuario = signal(false);
+  protected readonly claveAbierta = signal(false);
 
   protected readonly paletaAbierta = signal(false);
   protected readonly consulta = signal('');

@@ -41,7 +41,9 @@ export const MENU: GrupoMenu[] = [
     titulo: 'Comercial',
     items: [
       { ruta: '/ventas', titulo: 'Ventas', icono: 'recibo', permiso: 'ventas.ver' },
-      { ruta: '/clientes', titulo: 'Clientes', icono: 'cliente', permiso: 'clientes.ver' }
+      { ruta: '/clientes', titulo: 'Clientes', icono: 'cliente', permiso: 'clientes.ver' },
+      { ruta: '/productos', titulo: 'Productos', icono: 'bandeja', permiso: 'productos.ver' },
+      { ruta: '/notas', titulo: 'Notas de crédito/débito', icono: 'anular', permiso: 'notas.ver' }
     ]
   },
   {

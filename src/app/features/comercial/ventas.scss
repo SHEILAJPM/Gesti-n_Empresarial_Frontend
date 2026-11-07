@@ -79,3 +79,70 @@
 }
 
 .descargas { display: flex; gap: 8px; flex-wrap: wrap; }
+
+// ---------- Detalle en el formulario ----------
+.seccion-detalle { display: flex; flex-direction: column; gap: 10px; }
+.seccion-titulo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.linea {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.linea-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  select { flex: 1; min-width: 0; }
+}
+.linea-num {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+.linea-numeros {
+  display: grid;
+  grid-template-columns: 0.8fr 1.1fr 1fr 1fr;
+  gap: 8px;
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+  @media (max-width: 520px) { grid-template-columns: 1fr 1fr; }
+}
+.importe {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.repartir {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  label { display: flex; flex-direction: column; gap: 4px; width: 90px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+}
+.cuota { display: grid; grid-template-columns: 24px 1fr 1fr; gap: 8px; align-items: center; }
+.problemas {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12.5px;
+  li { display: flex; gap: 6px; align-items: center; }
+}
+

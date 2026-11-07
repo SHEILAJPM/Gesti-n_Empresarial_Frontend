@@ -8,11 +8,11 @@ import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
 import { AuthService } from '../../core/auth/auth.service';
 import { TASA_IGV_REFERENCIAL } from '../../core/config/constantes';
-import { Cliente, EstadoFacturacion, EstadoSunat, Venta } from '../../core/models';
+import { Cliente, EstadoFacturacion, EstadoSunat, FormaPago, Producto, Venta } from '../../core/models';
 import { ConfirmService } from '../../core/ui/confirm.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { ErrorCampo, PageHeader, Paginador, Vacio } from '../../shared/bloques';
-import { colorAvatar, hoyIso, iniciales, soles } from '../../shared/formato';
+import { colorAvatar, hoyIso, iniciales, isoLocal, soles } from '../../shared/formato';
 import { Icon } from '../../shared/icon';
 import { Panel } from '../../shared/panel';
 import { StatCard } from '../../shared/stat-card';
@@ -32,6 +32,7 @@ export class Ventas {
   private readonly auth = inject(AuthService);
   protected readonly puedeEditar = this.auth.puede('ventas.editar');
   protected readonly puedeAnular = this.auth.puede('ventas.anular');
+  protected readonly puedeNotas = this.auth.puede('notas.emitir');
   protected readonly soles = soles;
   protected readonly iniciales = iniciales;
   protected readonly colorAvatar = colorAvatar;
@@ -84,7 +85,6 @@ export class Ventas {
   protected readonly form = inject(NonNullableFormBuilder).group({
     documentoCliente: ['', Validators.required],
     numeroComprobante: ['', [Validators.required, Validators.pattern(/^[FB]\d{3}-\d{1,10}$/)]],
-    montoSinIgv: [0, [Validators.required, Validators.min(0.01)]],
     fecha: [hoyIso(), Validators.required]
   });
 
@@ -94,11 +94,30 @@ export class Ventas {
     () => this.clientes().find((c) => c.documento === this.valores().documentoCliente) ?? null
   );
   protected readonly tipoComprobante = computed(() => (this.clienteElegido()?.tipoDocumento === 'RUC' ? 'FACTURA' : 'BOLETA'));
+
+  // Detalle del comprobante
+  protected readonly productos = signal<Producto[]>([]);
+  protected readonly productosActivos = computed(() => this.productos().filter((p) => p.activo));
+  protected readonly unidades = signal<Partial<Record<string, string>>>({ NIU: 'Unidad', ZZ: 'Servicio' });
+  protected readonly listaUnidades = computed(() => Object.entries(this.unidades()).map(([codigo, nombre]) => ({ codigo, nombre })));
+  protected readonly lineas = signal<LineaForm[]>([]);
+  protected readonly observaciones = signal('');
+  protected readonly formaPago = signal<FormaPago>('CONTADO');
+  protected readonly cuotas = signal<CuotaForm[]>([]);
+  protected readonly numeroCuotas = signal(2);
+
+  /* Mismo cálculo que el backend: importe = cantidad × precio; IGV total sobre la suma */
   protected readonly vistaPrevia = computed(() => {
-    const base = Number(this.valores().montoSinIgv) || 0;
-    const igv = Math.round(base * TASA_IGV_REFERENCIAL * 100) / 100;
-    return { base, igv, total: base + igv };
+    const base = redondear(this.lineas().reduce((s, l) => s + importe(l), 0));
+    const igv = redondear(base * TASA_IGV_REFERENCIAL);
+    return { base, igv, total: redondear(base + igv) };
   });
+  protected readonly sumaCuotas = computed(() => redondear(this.cuotas().reduce((s, c) => s + (Number(c.monto) || 0), 0)));
+  protected readonly importe = importe;
+
+  // Comprobante (vista e impresión)
+  protected readonly comprobante = signal<Venta | null>(null);
+  protected readonly cargandoComprobante = signal(false);
 
   constructor() {
     this.cargar();
@@ -114,10 +133,14 @@ export class Ventas {
     forkJoin({
       ventas: this.api.ventas.listar(),
       clientes: this.api.clientes.listar(),
-      facturacion: this.api.facturacion.estado().pipe(catchError(() => of(null)))
+      facturacion: this.api.facturacion.estado().pipe(catchError(() => of(null))),
+      productos: this.api.productos.listar().pipe(catchError(() => of([] as Producto[]))),
+      unidades: this.api.productos.unidades().pipe(catchError(() => of(null)))
     }).subscribe({
-      next: ({ ventas, clientes, facturacion }) => {
+      next: ({ ventas, clientes, facturacion, productos, unidades }) => {
         this.facturacion.set(facturacion);
+        this.productos.set(productos);
+        if (unidades) this.unidades.set(unidades);
         this.ventas.set(ventas.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id));
         this.clientes.set(clientes.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
         this.cargando.set(false);
@@ -138,8 +161,100 @@ export class Ventas {
   }
 
   protected abrir(): void {
-    this.form.reset({ documentoCliente: '', numeroComprobante: '', montoSinIgv: 0, fecha: hoyIso() });
+    this.form.reset({ documentoCliente: '', numeroComprobante: '', fecha: hoyIso() });
+    this.lineas.set([nuevaLinea()]);
+    this.observaciones.set('');
+    this.formaPago.set('CONTADO');
+    this.cuotas.set([]);
     this.panelAbierto.set(true);
+  }
+
+  // ---------- Líneas del detalle ----------
+  protected agregarLinea(): void {
+    this.lineas.update((l) => [...l, nuevaLinea()]);
+  }
+
+  protected quitarLinea(clave: number): void {
+    this.lineas.update((l) => (l.length > 1 ? l.filter((x) => x.clave !== clave) : [nuevaLinea()]));
+  }
+
+  protected cambiarLinea(clave: number, cambios: Partial<LineaForm>): void {
+    this.lineas.update((l) => l.map((x) => (x.clave === clave ? { ...x, ...cambios } : x)));
+  }
+
+  /* Elegir del catálogo llena descripción, unidad y precio; "a mano" deja la línea libre */
+  protected elegirProducto(clave: number, id: string): void {
+    const p = this.productos().find((x) => x.id === Number(id));
+    this.cambiarLinea(clave, p
+      ? { productoId: p.id, codigo: p.codigo, descripcion: p.descripcion, unidad: p.unidad, valorUnitario: p.valorUnitario }
+      : { productoId: null, codigo: null });
+  }
+
+  // ---------- Forma de pago ----------
+  protected cambiarFormaPago(forma: FormaPago): void {
+    this.formaPago.set(forma);
+    if (forma === 'CREDITO' && !this.cuotas().length) this.repartirCuotas();
+  }
+
+  /* Divide el total en N cuotas mensuales; la última absorbe los céntimos */
+  protected repartirCuotas(): void {
+    const n = Math.min(36, Math.max(1, this.numeroCuotas()));
+    const total = this.vistaPrevia().total;
+    const parte = Math.floor((total / n) * 100) / 100;
+    const base = new Date(`${this.form.getRawValue().fecha}T12:00:00`);
+    this.cuotas.set(Array.from({ length: n }, (_, i) => {
+      const fecha = new Date(base);
+      fecha.setMonth(fecha.getMonth() + i + 1);
+      return { clave: i + 1, fechaVencimiento: isoLocal(fecha), monto: i === n - 1 ? redondear(total - parte * (n - 1)) : parte };
+    }));
+  }
+
+  protected cambiarCuota(clave: number, cambios: Partial<CuotaForm>): void {
+    this.cuotas.update((l) => l.map((x) => (x.clave === clave ? { ...x, ...cambios } : x)));
+  }
+
+  /* Problemas que impiden emitir; el backend vuelve a validar todo */
+  protected readonly problemas = computed(() => {
+    const lista: string[] = [];
+    const lineas = this.lineas();
+    if (lineas.some((l) => !l.descripcion.trim())) lista.push('Cada línea necesita una descripción.');
+    if (lineas.some((l) => !(Number(l.cantidad) > 0))) lista.push('Las cantidades deben ser mayores a cero.');
+    if (lineas.some((l) => !(Number(l.valorUnitario) >= 0))) lista.push('Revisa los precios.');
+    if (this.vistaPrevia().total <= 0) lista.push('El total debe ser mayor a cero.');
+    if (this.formaPago() === 'CREDITO') {
+      if (this.tipoComprobante() !== 'FACTURA') lista.push('Al crédito solo se emiten facturas (cliente con RUC).');
+      if (!this.cuotas().length) lista.push('Agrega al menos una cuota.');
+      else if (Math.abs(this.sumaCuotas() - this.vistaPrevia().total) > 0.001) {
+        lista.push(`Las cuotas suman ${soles(this.sumaCuotas())} y deben sumar ${soles(this.vistaPrevia().total)}.`);
+      }
+    }
+    return lista;
+  });
+
+  // ---------- Comprobante ----------
+  protected verComprobante(v: Venta): void {
+    this.cargandoComprobante.set(true);
+    this.comprobante.set(v);
+    this.api.ventas.obtener(v.id).subscribe({
+      next: (completa) => {
+        this.comprobante.set(completa);
+        this.cargandoComprobante.set(false);
+      },
+      error: (e) => {
+        this.toast.error(mensajeDeError(e));
+        this.cargandoComprobante.set(false);
+      }
+    });
+  }
+
+  /* Mientras se imprime solo se ve el comprobante (ver @media print en _base.scss) */
+  protected imprimir(): void {
+    const raiz = document.documentElement;
+    raiz.classList.add('imprimiendo-comprobante');
+    const quitar = () => raiz.classList.remove('imprimiendo-comprobante');
+    window.addEventListener('afterprint', quitar, { once: true });
+    window.print();
+    setTimeout(quitar, 1000);
   }
 
   /* Al elegir el cliente pide al backend el siguiente número libre de la serie F001 o B001
@@ -170,8 +285,23 @@ export class Ventas {
       this.toast.error(`Este cliente requiere ${this.tipoComprobante().toLowerCase()}: el número debe empezar con ${letra}.`);
       return;
     }
+    const problema = this.problemas()[0];
+    if (problema) {
+      this.toast.error(problema);
+      return;
+    }
+    const credito = this.formaPago() === 'CREDITO';
     this.guardando.set(true);
-    this.api.ventas.registrar({ ...datos, montoSinIgv: Number(datos.montoSinIgv) }).subscribe({
+    this.api.ventas.registrar({
+      ...datos,
+      items: this.lineas().map((l) => ({
+        productoId: l.productoId, codigo: l.codigo, descripcion: l.descripcion.trim(), unidad: l.unidad,
+        cantidad: Number(l.cantidad), valorUnitario: Number(l.valorUnitario)
+      })),
+      formaPago: this.formaPago(),
+      cuotas: credito ? this.cuotas().map((c) => ({ fechaVencimiento: c.fechaVencimiento, monto: Number(c.monto) })) : [],
+      observaciones: this.observaciones().trim() || null
+    }).subscribe({
       next: (venta) => {
         this.ventas.update((lista) => [venta, ...lista]);
         const tipo = venta.tipoComprobante === 'FACTURA' ? 'Factura' : 'Boleta';
@@ -188,7 +318,15 @@ export class Ventas {
         }
       },
       error: (e) => {
-        this.toast.error(mensajeDeError(e));
+        const mensaje = mensajeDeError(e);
+        // Otra persona usó ese número mientras se llenaba el formulario: se carga el siguiente libre para reintentar
+        const libre = /siguiente número libre es ([FB]\d{3}-\d+)/.exec(mensaje)?.[1];
+        if (libre) {
+          this.form.controls.numeroComprobante.setValue(libre);
+          this.toast.info(`Ese número ya se usó. Te dejamos el siguiente libre: ${libre}. Pulsa guardar otra vez.`);
+        } else {
+          this.toast.error(mensaje);
+        }
         this.guardando.set(false);
       }
     });
@@ -282,4 +420,34 @@ export class Ventas {
     this.ventas.update((lista) => lista.map((x) => (x.id === v.id ? v : x)));
     if (this.detalleSunat()?.id === v.id) this.detalleSunat.set(v);
   }
+}
+
+interface LineaForm {
+  clave: number;
+  productoId: number | null;
+  codigo: string | null;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+  valorUnitario: number;
+}
+
+interface CuotaForm {
+  clave: number;
+  fechaVencimiento: string;
+  monto: number;
+}
+
+let siguienteClave = 1;
+
+function nuevaLinea(): LineaForm {
+  return { clave: siguienteClave++, productoId: null, codigo: null, descripcion: '', unidad: 'NIU', cantidad: 1, valorUnitario: 0 };
+}
+
+function redondear(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+function importe(l: LineaForm): number {
+  return redondear((Number(l.cantidad) || 0) * (Number(l.valorUnitario) || 0));
 }

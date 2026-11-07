@@ -95,6 +95,9 @@
             <app-icon [name]="tema.tema() === 'light' ? 'luna' : 'sol'" [size]="17" />
             {{ tema.tema() === 'light' ? 'Modo oscuro' : 'Modo claro' }}
           </button>
+          <button type="button" class="opcion" (click)="menuUsuario.set(false); claveAbierta.set(true)">
+            <app-icon name="candado" [size]="17" /> Cambiar contraseña
+          </button>
           <button type="button" class="opcion peligro" (click)="auth.cerrarSesion()">
             <app-icon name="salir" [size]="17" /> Cerrar sesión
           </button>
@@ -134,3 +137,5 @@
     </ul>
   </div>
 }
+
+<app-cambiar-clave [abierto]="claveAbierta()" (cerrar)="claveAbierta.set(false)" />

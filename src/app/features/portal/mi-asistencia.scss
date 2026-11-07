@@ -149,3 +149,46 @@
 }
 
 .mapa-card app-mapa { --alto-mapa: 380px; }
+
+.boton-marcar .con-foto {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: -4px;
+  padding: 2px 9px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.2);
+  font-family: var(--font-body, inherit);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+// Requisitos para marcar: ubicación y foto
+.pasos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    font-size: 13px;
+    color: var(--ink-2);
+    app-icon { color: var(--brand); margin-top: 1px; flex-shrink: 0; }
+    &.hecho app-icon { color: var(--success); }
+  }
+}
+
+// En el celular la tabla muestra lo esencial: fecha, tipo, hora y foto
+.nowrap { white-space: nowrap; }
+@media (max-width: 600px) {
+  .ocultar-movil { display: none; }
+}

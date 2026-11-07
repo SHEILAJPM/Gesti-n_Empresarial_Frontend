@@ -9,11 +9,17 @@ export const PERMISOS = {
   'asistencia.ver': ['ADMIN', 'RRHH'],
   'documentos.ver': ['ADMIN', 'RRHH'],
 
-  'ventas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
-  'ventas.editar': ['ADMIN', 'ADMINISTRACION'],
+  'ventas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
+  // Emitir boletas y facturas: Administración y los vendedores
+  'ventas.editar': ['ADMIN', 'ADMINISTRACION', 'VENDEDOR'],
   'ventas.anular': ['ADMIN', 'CONTABILIDAD'],
-  'clientes.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
+  'clientes.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
+  'clientes.crear': ['ADMIN', 'ADMINISTRACION', 'VENDEDOR'],
   'clientes.editar': ['ADMIN', 'ADMINISTRACION'],
+  'productos.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
+  'productos.editar': ['ADMIN', 'ADMINISTRACION'],
+  'notas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
+  'notas.emitir': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
 
   'compras.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],
   'compras.editar': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],

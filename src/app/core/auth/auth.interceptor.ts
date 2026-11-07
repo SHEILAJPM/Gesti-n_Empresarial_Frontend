@@ -12,17 +12,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   const auth = inject(AuthService);
   const toast = inject(ToastService);
-  const token = auth.sesion()?.token;
+  // El login no lleva token: un 401 ahí significa usuario o contraseña incorrectos, no sesión vencida
+  const esLogin = req.url.endsWith('/api/auth/login');
+  const token = esLogin ? null : auth.tokenVigente();
 
   // X-Requested-With evita que el navegador abra su ventana nativa de login ante un 401
   let headers = req.headers.set('X-Requested-With', 'XMLHttpRequest');
   if (token && !headers.has('Authorization')) {
-    headers = headers.set('Authorization', `Basic ${token}`);
+    headers = headers.set('Authorization', `Bearer ${token}`);
   }
 
   return next(req.clone({ headers })).pipe(
     catchError((error: HttpErrorResponse) => {
-      const esLogin = req.url.endsWith('/api/auth/me') && !token;
       if (error.status === 401 && !esLogin) {
         auth.cerrarSesion('expirada');
       } else if (error.status === 403) {

@@ -1,6 +1,6 @@
 <div class="pila">
   <app-page-header seccion="Comercial" titulo="Clientes" descripcion="Personas (DNI) y empresas (RUC) a las que se les vende.">
-    @if (puedeEditar) {
+    @if (puedeCrear) {
       <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nuevo cliente</button>
     }
   </app-page-header>

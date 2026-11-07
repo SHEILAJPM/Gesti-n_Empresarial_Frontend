@@ -4,9 +4,11 @@ import { Observable } from 'rxjs';
 import { API_URL } from '../config/constantes';
 import {
   CeseRequest, Cliente, ClienteRequest, DocumentoConsultado, EstadoFacturacion, IntentoMarcacion, MiBoleta, MiPerfil, Sede, TipoComprobante, Compra, CompraRequest, ConfiguracionTributaria, Documento, DocumentoRequest,
-  Marcacion, MarcarRequest, Pago, PagoRequest, Planilla, Proveedor, ProveedorRequest, ResumenTributario, Simulacion,
-  Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest
+  Marcacion, MarcarRequest, Pago, PagoRequest, Planilla, Proveedor, ProveedorRequest, ResumenAsistencia, ResumenTributario, Simulacion,
+  Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest, Producto, ProductoRequest,
+  MotivosNota, Nota, NotaRequest
 } from '../models';
+import type { RespuestaLogin } from '../auth/auth.service';
 
 type Parametros = Record<string, string | number | boolean>;
 
@@ -29,7 +31,16 @@ export class ApiService {
     listar: () => this.get<Marcacion[]>('/api/asistencia'),
     intentos: () => this.get<IntentoMarcacion[]>('/api/asistencia/intentos'),
     porTrabajador: (id: number) => this.get<Marcacion[]>(`/api/asistencia/trabajador/${id}`),
-    marcar: (datos: MarcarRequest) => this.post<Marcacion>('/api/asistencia/marcar', datos)
+    // La imagen se pide como Blob: la petición lleva la sesión y el <img> no podría mandarla
+    foto: (fotoId: number) => this.imagen(`/api/asistencia/fotos/${fotoId}`),
+    marcar: (datos: MarcarRequest) => this.post<Marcacion>('/api/asistencia/marcar', datos),
+    resumen: (anio: number, mes: number) => this.get<ResumenAsistencia>('/api/asistencia/resumen', { anio, mes })
+  };
+
+  readonly cuenta = {
+    /* Devuelve un token nuevo: las demás sesiones del usuario se cierran */
+    cambiarClave: (claveActual: string, claveNueva: string) =>
+      this.put<RespuestaLogin>('/api/auth/clave', { claveActual, claveNueva })
   };
 
   readonly documentos = {
@@ -47,8 +58,28 @@ export class ApiService {
     eliminar: (id: number) => this.delete(`/api/clientes/${id}`)
   };
 
+  readonly notas = {
+    listar: (ventaId?: number) => this.get<Nota[]>('/api/notas', ventaId ? { ventaId } : undefined),
+    obtener: (id: number) => this.get<Nota>(`/api/notas/${id}`),
+    motivos: () => this.get<MotivosNota>('/api/notas/motivos'),
+    emitir: (datos: NotaRequest) => this.post<Nota>('/api/notas', datos),
+    consultarSunat: (id: number) => this.get<Nota>(`/api/notas/${id}/sunat`),
+    reenviarSunat: (id: number) => this.post<Nota>(`/api/notas/${id}/sunat/reenviar`, null)
+  };
+
+  readonly productos = {
+    listar: () => this.get<Producto[]>('/api/productos'),
+    unidades: () => this.get<Record<string, string>>('/api/productos/unidades'),
+    crear: (datos: ProductoRequest) => this.post<Producto>('/api/productos', datos),
+    actualizar: (id: number, datos: ProductoRequest) => this.put<Producto>(`/api/productos/${id}`, datos),
+    cambiarEstado: (id: number, activo: boolean) =>
+      this.http.patch<Producto>(this.url(`/api/productos/${id}/estado`), null, { params: { activo } })
+  };
+
   readonly ventas = {
     listar: () => this.get<Venta[]>('/api/ventas'),
+    /* Con el detalle (líneas y cuotas) */
+    obtener: (id: number) => this.get<Venta>(`/api/ventas/${id}`),
     registrar: (datos: VentaRequest) => this.post<Venta>('/api/ventas', datos),
     anular: (id: number) => this.http.patch<Venta>(this.url(`/api/ventas/${id}/anular`), null),
     consultarSunat: (id: number) => this.get<Venta>(`/api/ventas/${id}/sunat`),
@@ -87,8 +118,10 @@ export class ApiService {
 
   readonly portal = {
     perfil: () => this.get<MiPerfil>('/api/mi/perfil'),
-    marcar: (latitud: number, longitud: number, precision: number) =>
-      this.post<Marcacion>('/api/mi/asistencia', { latitud, longitud, precision }),
+    /* foto: JPEG en Base64 tomado con la cámara, con la ubicación impresa */
+    marcar: (datos: { latitud: number; longitud: number; precision: number; foto: string }) =>
+      this.post<Marcacion>('/api/mi/asistencia', datos),
+    miFoto: (marcacionId: number) => this.imagen(`/api/mi/asistencia/${marcacionId}/foto`),
     misMarcaciones: () => this.get<Marcacion[]>('/api/mi/asistencia'),
     misBoletas: () => this.get<MiBoleta[]>('/api/mi/boletas')
   };
@@ -122,6 +155,7 @@ export class ApiService {
     crear: (datos: UsuarioRequest) => this.post<Usuario>('/api/usuarios', datos),
     vincularTrabajador: (id: number, trabajadorId: number | null) =>
       this.http.patch<Usuario>(this.url(`/api/usuarios/${id}/trabajador`), { trabajadorId }),
+    restablecerClave: (id: number, claveNueva: string) => this.put<Usuario>(`/api/usuarios/${id}/clave`, { claveNueva }),
     cambiarEstado: (id: number, activo: boolean) =>
       this.http.patch<Usuario>(this.url(`/api/usuarios/${id}/estado`), null, { params: { activo } })
   };
@@ -140,6 +174,10 @@ export class ApiService {
 
   private put<T>(ruta: string, cuerpo: unknown): Observable<T> {
     return this.http.put<T>(this.url(ruta), cuerpo);
+  }
+
+  private imagen(ruta: string): Observable<Blob> {
+    return this.http.get(this.url(ruta), { responseType: 'blob' });
   }
 
   private delete(ruta: string): Observable<void> {

@@ -95,7 +95,10 @@
                   <span class="badge" [class.badge-info]="d.sistemaPension === 'AFP'">{{ d.sistemaPension }}{{ d.afp ? ' ' + d.afp : '' }}</span>
                   <small class="muted num" style="display: block">{{ porcentaje(d.tasaPension) }}</small>
                 </td>
-                <td class="right num nowrap text-danger">− {{ soles(d.descuentoPension) }}</td>
+                <td class="right num nowrap text-danger">
+                  − {{ soles(d.descuentoPension) }}
+                  @if (d.rentaQuinta > 0) { <small class="muted" style="display: block">5ta: − {{ soles(d.rentaQuinta) }}</small> }
+                </td>
                 <td class="right num nowrap"><strong>{{ soles(d.neto) }}</strong></td>
                 <td class="right num muted">{{ soles(d.essalud) }}</td>
                 @if (p.estado === 'APROBADA') {

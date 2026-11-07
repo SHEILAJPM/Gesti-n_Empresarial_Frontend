@@ -32,6 +32,8 @@ export class Clientes {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   protected readonly puedeEditar = inject(AuthService).puede('clientes.editar');
+  // Registrar clientes nuevos también lo puede el vendedor; editar y eliminar, no
+  protected readonly puedeCrear = inject(AuthService).puede('clientes.crear');
   protected readonly soles = soles;
   protected readonly iniciales = iniciales;
   protected readonly colorAvatar = colorAvatar;
@@ -92,7 +94,7 @@ export class Clientes {
   constructor() {
     this.cargar();
     effect(() => {
-      if (this.nuevo() && this.puedeEditar) {
+      if (this.nuevo() && this.puedeCrear) {
         this.abrir();
       }
     });

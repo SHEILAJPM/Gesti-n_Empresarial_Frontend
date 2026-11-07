@@ -43,6 +43,8 @@
                 <td class="ink-2" style="max-width: 360px">{{ descripcionRol[u.rol] }}</td>
                 <td>
                   <div class="acciones" style="opacity: 1">
+                    <button type="button" class="btn btn-sm btn-fantasma btn-icono" [attr.aria-label]="'Restablecer contraseña de ' + u.username"
+                      title="Restablecer contraseña" (click)="claveDe.set(u)"><app-icon name="candado" [size]="16" /></button>
                     <button type="button" class="switch" [class.on]="u.activo" role="switch" [attr.aria-checked]="u.activo"
                       [attr.aria-label]="(u.activo ? 'Desactivar ' : 'Activar ') + u.username"
                       [disabled]="u.username === usuarioActual || cambiandoId() === u.id" (click)="alternarEstado(u)"></button>
@@ -81,6 +83,7 @@
       <label class="ayuda" style="display: flex; gap: 6px; align-items: center; cursor: pointer">
         <input type="checkbox" [checked]="verClave()" (change)="verClave.set(!verClave())" /> Mostrar contraseña
       </label>
+      <p class="ayuda">Mínimo 8 caracteres, con letras y números.</p>
       <app-error-campo [control]="form.controls.password" />
     </div>
     <div class="campo">
@@ -115,3 +118,5 @@
     </button>
   </ng-container>
 </app-panel>
+
+<app-cambiar-clave [abierto]="!!claveDe()" [cuenta]="claveDe()" (cerrar)="claveDe.set(null)" />

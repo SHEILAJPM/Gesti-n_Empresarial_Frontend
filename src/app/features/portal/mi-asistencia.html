@@ -54,6 +54,7 @@
             } @else {
               <app-icon [name]="siguiente() === 'ENTRADA' ? 'entrar' : 'salir'" [size]="34" [grosor]="2" />
               <span>Marcar {{ siguiente() === 'ENTRADA' ? 'entrada' : 'salida' }}</span>
+              <small class="con-foto"><app-icon name="camara" [size]="13" /> con foto</small>
             }
           </button>
 
@@ -67,7 +68,11 @@
             </div>
           }
 
-          <p class="ayuda">Debes estar a máximo <b>{{ sede()!.radioMetros }} m</b> de {{ sede()!.nombre }}. La hora la registra el sistema, no tu celular.</p>
+          <ol class="pasos">
+            <li [class.hecho]="dentro()"><app-icon name="ubicacion" [size]="15" /> Estar a máximo <b>{{ sede()!.radioMetros }} m</b> de {{ sede()!.nombre }}</li>
+            <li><app-icon name="camara" [size]="15" /> Tomarte una foto: lleva impresa tu ubicación, la fecha y la hora</li>
+          </ol>
+          <p class="ayuda">La hora oficial la registra el sistema, no tu celular.</p>
         }
       </article>
 
@@ -94,15 +99,22 @@
       @if (tabla.filtradas().length) {
         <div class="tabla-contenedor" style="margin-top: 12px">
           <table class="tabla">
-            <thead><tr><th>Fecha</th><th>Tipo</th><th>Registrada por</th><th class="right">Distancia</th><th class="right">Hora</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th class="ocultar-movil">Registrada por</th><th class="right ocultar-movil">Distancia</th><th class="right">Hora</th><th class="right">Foto</th></tr></thead>
             <tbody>
               @for (m of tabla.visibles(); track m.id; let i = $index) {
                 <tr [style.--i]="i">
-                  <td>{{ m.fechaHora | date: 'EEE d MMM y' }}</td>
+                  <td class="nowrap">{{ m.fechaHora | date: 'EEE d MMM' }}</td>
                   <td><span class="badge punto" [class.badge-exito]="m.tipo === 'ENTRADA'" [class.badge-info]="m.tipo === 'SALIDA'">{{ m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}</span></td>
-                  <td class="ink-2">{{ m.origen === 'PORTAL' ? 'Yo (celular)' : 'Recursos Humanos' }}</td>
-                  <td class="right num">{{ m.distanciaMetros !== null ? (m.distanciaMetros | number: '1.0-0') + ' m' : '—' }}</td>
+                  <td class="ink-2 ocultar-movil">{{ m.origen === 'PORTAL' ? 'Yo (celular)' : 'Recursos Humanos' }}</td>
+                  <td class="right num ocultar-movil">{{ m.distanciaMetros !== null ? (m.distanciaMetros | number: '1.0-0') + ' m' : '—' }}</td>
                   <td class="right num">{{ m.fechaHora | date: 'HH:mm:ss' }}</td>
+                  <td class="right">
+                    @if (m.fotoId) {
+                      <button type="button" class="btn btn-sm btn-fantasma" (click)="fotoVista.set(m)" aria-label="Ver foto">
+                        <app-icon name="camara" [size]="15" /> Ver
+                      </button>
+                    } @else { <span class="muted">—</span> }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -115,4 +127,16 @@
       }
     </article>
   </div>
+
+  @if (camaraAbierta() && sello(); as s) {
+    <app-camara-marcacion [datos]="s" [enviando]="marcando()" (confirmar)="enviar($event)" (cancelar)="camaraAbierta.set(false)" />
+  }
+
+  <app-panel [abierto]="!!fotoVista()" (cerrar)="fotoVista.set(null)" etiqueta="Mi asistencia"
+    [titulo]="fotoVista()?.tipo === 'SALIDA' ? 'Foto de salida' : 'Foto de entrada'"
+    [descripcion]="(fotoVista()?.fechaHora | date: 'EEEE d \'de\' MMMM, HH:mm:ss') ?? ''">
+    @if (fotoVista(); as f) {
+      <app-foto-asistencia [marcacionPropia]="f.id" />
+    }
+  </app-panel>
 }
