@@ -89,6 +89,19 @@
       </article>
     </div>
 
+    @if (resumenMes(); as r) {
+      <section class="grid-kpi escalonado">
+        <app-stat-card style="--i: 0" titulo="Días asistidos este mes" [valor]="r.diasAsistidos" icono="checkCirculo" tono="exito"
+          [detalle]="'de ' + r.diasLaborables + ' días laborables'" />
+        <app-stat-card style="--i: 1" titulo="Tardanzas" [valor]="r.tardanzas" icono="reloj" tono="alerta"
+          [detalle]="r.minutosTardanza + ' minutos en total'" />
+        <app-stat-card style="--i: 2" titulo="Faltas" [valor]="r.faltas" icono="alerta" tono="peligro"
+          [detalle]="r.diasJustificados ? r.diasJustificados + ' días justificados aparte' : 'sin justificar'" />
+        <app-stat-card style="--i: 3" titulo="Horas trabajadas" [valor]="r.horasTrabajadas" icono="calendario" tono="info"
+          [detalle]="r.diasSinSalida ? r.diasSinSalida + ' días sin marcar salida' : 'este mes'" />
+      </section>
+    }
+
     <article class="card entrada">
       <header class="card-cabecera">
         <div>

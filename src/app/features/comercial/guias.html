@@ -6,6 +6,35 @@
     }
   </app-page-header>
 
+  @if (puedeEmitir && porDespachar().length) {
+    <article class="card entrada">
+      <header class="card-cabecera">
+        <div><h3 style="margin: 0; display: flex; gap: 8px; align-items: center"><app-icon name="camion" [size]="17" /> Por despachar
+          <span class="contador num">{{ porDespachar().length }}</span></h3>
+          <p class="muted" style="margin: 4px 0 0; font-size: 13px">Ventas de los últimos 60 días con mercadería y sin guía de remisión.</p></div>
+      </header>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead><tr><th>Comprobante</th><th>Cliente</th><th>Fecha</th><th class="right">Líneas</th><th>Vendió</th><th class="right"></th></tr></thead>
+          <tbody>
+            @for (v of porDespachar(); track v.ventaId) {
+              <tr>
+                <td class="mono"><strong>{{ v.numeroComprobante }}</strong></td>
+                <td>{{ v.cliente }}</td>
+                <td class="nowrap">{{ v.fecha | date: 'd MMM' }}</td>
+                <td class="right num">{{ v.lineas }}</td>
+                <td class="muted">{{ v.emitidaPor || '—' }}</td>
+                <td class="right">
+                  <a class="btn btn-sm btn-primario" routerLink="/guias" [queryParams]="{ venta: v.ventaId }"><app-icon name="camion" [size]="15" /> Crear guía</a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  }
+
   <section class="grid-kpi escalonado">
     <app-stat-card style="--i: 0" titulo="Guías emitidas" [valor]="guias().length" icono="camion" [cargando]="cargando()" />
     <app-stat-card style="--i: 1" titulo="Emitidas hoy" [valor]="deHoy()" icono="calendario" tono="info" [cargando]="cargando()" />

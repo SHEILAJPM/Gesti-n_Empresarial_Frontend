@@ -8,6 +8,12 @@ export const PERMISOS = {
   'personal.listar': ['ADMIN', 'RRHH', 'CONTABILIDAD'],
   'asistencia.ver': ['ADMIN', 'RRHH'],
   'documentos.ver': ['ADMIN', 'RRHH'],
+  // Vacaciones, descansos médicos y permisos: RRHH los aprueba o registra
+  'ausencias.ver': ['ADMIN', 'RRHH'],
+  // Tareas: las asignan RRHH, los jefes de área y el administrador
+  'tareas.ver': ['ADMIN', 'RRHH', 'CONTABILIDAD', 'ADMINISTRACION'],
+  // Reportes de ventas por vendedor y por producto
+  'ventas.reportes': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
 
   // Almacén consulta las ventas para despacharlas con guía
   'ventas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR', 'ALMACEN'],
@@ -43,6 +49,7 @@ export const PERMISOS = {
   'tributario.configurar': ['ADMIN'],
 
   'usuarios.ver': ['ADMIN'],
+  'bitacora.ver': ['ADMIN'],
   'sede.ver': ['ADMIN', 'RRHH'],
   'sede.configurar': ['ADMIN'],
 

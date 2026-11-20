@@ -3,6 +3,25 @@
     <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nuevo usuario</button>
   </app-page-header>
 
+  @if (solicitudes().length) {
+    <article class="card entrada pedidos-clave">
+      <header class="card-cabecera">
+        <div><h3><app-icon name="candado" [size]="17" /> Pedidos de contraseña</h3>
+          <p class="muted">Estas personas pulsaron «¿Olvidaste tu contraseña?». Ponles una nueva y entrégasela en persona.</p></div>
+      </header>
+      <ul>
+        @for (s of solicitudes(); track s.id) {
+          <li>
+            <span><strong>{{ s.usuario }}</strong> <span class="muted">· {{ s.solicitadaEn | date: 'd MMM, HH:mm' }}</span></span>
+            <button type="button" class="btn btn-sm btn-primario" (click)="restablecerPedido(s.usuarioId)">
+              <app-icon name="candado" [size]="15" /> Poner contraseña nueva
+            </button>
+          </li>
+        }
+      </ul>
+    </article>
+  }
+
   <section class="grid-kpi escalonado">
     <app-stat-card style="--i: 0" titulo="Usuarios" [valor]="usuarios().length" icono="escudo" [cargando]="cargando()" />
     <app-stat-card style="--i: 1" titulo="Activos" [valor]="activos()" icono="checkCirculo" tono="exito" [cargando]="cargando()"
@@ -119,4 +138,4 @@
   </ng-container>
 </app-panel>
 
-<app-cambiar-clave [abierto]="!!claveDe()" [cuenta]="claveDe()" (cerrar)="claveDe.set(null)" />
+<app-cambiar-clave [abierto]="!!claveDe()" [cuenta]="claveDe()" (cerrar)="claveDe.set(null); cargarSolicitudes()" />

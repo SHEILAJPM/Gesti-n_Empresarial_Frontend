@@ -1,11 +1,11 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
 import { AuthService } from '../../core/auth/auth.service';
-import { EstadoFacturacion, EstadoSunat, Guia, ModalidadTraslado, Producto, Venta } from '../../core/models';
+import { EstadoFacturacion, EstadoSunat, Guia, ModalidadTraslado, Producto, Venta, VentaPorDespachar } from '../../core/models';
 import { ToastService } from '../../core/ui/toast.service';
 import { PageHeader, Paginador, Vacio } from '../../shared/bloques';
 import { hoyIso } from '../../shared/formato';
@@ -29,7 +29,7 @@ let clave = 1;
 /* Guías de remisión remitente: traslado de mercadería con transporte propio o contratado */
 @Component({
   selector: 'app-guias',
-  imports: [DatePipe, DecimalPipe, PageHeader, StatCard, Icon, Panel, Paginador, Vacio],
+  imports: [RouterLink, DatePipe, DecimalPipe, PageHeader, StatCard, Icon, Panel, Paginador, Vacio],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './guias.html',
   styleUrl: './guias.scss'
@@ -126,10 +126,18 @@ export class Guias {
         this.cargando.set(false);
       }
     });
+    this.cargarPorDespachar();
     effect(() => {
       const id = Number(this.venta());
       if (id && this.puedeEmitir) untracked(() => this.abrirDesdeVenta(id));
     });
+  }
+
+  /* Ventas con mercadería que aún no tienen guía: lo que Almacén tiene que despachar */
+  protected readonly porDespachar = signal<VentaPorDespachar[]>([]);
+
+  private cargarPorDespachar(): void {
+    this.api.reportesVentas.porDespachar().subscribe({ next: (l) => this.porDespachar.set(l), error: () => this.porDespachar.set([]) });
   }
 
   protected abrir(): void {
@@ -233,6 +241,7 @@ export class Guias {
     }).subscribe({
       next: (g) => {
         this.guias.update((l) => [g, ...l]);
+        this.cargarPorDespachar();
         if (['RECHAZADO', 'ERROR', 'EXCEPCION'].includes(g.sunat.estado)) {
           this.toast.error(`Guía ${g.numero} registrada, pero SUNAT: ${g.sunat.mensaje}`);
         } else {

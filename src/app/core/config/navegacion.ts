@@ -21,12 +21,17 @@ export const MENU: GrupoMenu[] = [
     titulo: 'Mi espacio',
     items: [
       { ruta: '/mi-asistencia', titulo: 'Marcar asistencia', icono: 'ubicacion', requiereFicha: true },
+      { ruta: '/mis-tareas', titulo: 'Mis tareas', icono: 'tareas', requiereFicha: true },
+      { ruta: '/mis-ausencias', titulo: 'Vacaciones y permisos', icono: 'maleta', requiereFicha: true },
       { ruta: '/mis-boletas', titulo: 'Mis boletas', icono: 'recibo', requiereFicha: true }
     ]
   },
   {
     titulo: 'General',
-    items: [{ ruta: '/panel', titulo: 'Panel', icono: 'panel', permiso: 'panel.ver' }]
+    items: [
+      { ruta: '/panel', titulo: 'Panel', icono: 'panel', permiso: 'panel.ver' },
+      { ruta: '/tareas', titulo: 'Tareas', icono: 'tareas', permiso: 'tareas.ver' }
+    ]
   },
   {
     titulo: 'Recursos humanos',
@@ -34,6 +39,7 @@ export const MENU: GrupoMenu[] = [
       { ruta: '/personal', titulo: 'Trabajadores', icono: 'usuarios', permiso: 'personal.ver' },
       { ruta: '/asistencia', titulo: 'Asistencia', icono: 'reloj', permiso: 'asistencia.ver' },
       { ruta: '/documentos', titulo: 'Documentos', icono: 'documento', permiso: 'documentos.ver' },
+      { ruta: '/ausencias', titulo: 'Vacaciones y permisos', icono: 'maleta', permiso: 'ausencias.ver' },
       { ruta: '/planillas', titulo: 'Planillas', icono: 'calculadora', permiso: 'planillas.ver' }
     ]
   },
@@ -44,7 +50,8 @@ export const MENU: GrupoMenu[] = [
       { ruta: '/clientes', titulo: 'Clientes', icono: 'cliente', permiso: 'clientes.ver' },
       { ruta: '/productos', titulo: 'Productos', icono: 'bandeja', permiso: 'productos.ver' },
       { ruta: '/notas', titulo: 'Notas de crédito/débito', icono: 'anular', permiso: 'notas.ver' },
-      { ruta: '/guias', titulo: 'Guías de remisión', icono: 'camion', permiso: 'guias.ver' }
+      { ruta: '/guias', titulo: 'Guías de remisión', icono: 'camion', permiso: 'guias.ver' },
+      { ruta: '/reportes-ventas', titulo: 'Reportes de ventas', icono: 'porcentaje', permiso: 'ventas.reportes' }
     ]
   },
   {
@@ -67,6 +74,7 @@ export const MENU: GrupoMenu[] = [
     titulo: 'Sistema',
     items: [
       { ruta: '/usuarios', titulo: 'Usuarios', icono: 'escudo', permiso: 'usuarios.ver' },
+      { ruta: '/bitacora', titulo: 'Bitácora', icono: 'historial', permiso: 'bitacora.ver' },
       { ruta: '/sede', titulo: 'Sede y ubicación', icono: 'ubicacion', permiso: 'sede.ver' }
     ]
   }

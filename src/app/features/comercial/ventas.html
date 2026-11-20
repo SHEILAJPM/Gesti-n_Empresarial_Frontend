@@ -43,6 +43,11 @@
       </select>
       <input #d type="date" class="control" style="width: auto" [value]="desde()" (change)="desde.set(d.value); tabla.pagina.set(1)" aria-label="Desde" />
       <input #h type="date" class="control" style="width: auto" [value]="hasta()" (change)="hasta.set(h.value); tabla.pagina.set(1)" aria-label="Hasta" />
+      @if (puedeEditar) {
+        <label class="nowrap" style="display: inline-flex; gap: 6px; align-items: center; font-size: 13px">
+          <input type="checkbox" [checked]="soloMias()" (change)="soloMias.set($any($event.target).checked); tabla.pagina.set(1)" /> Solo las mías
+        </label>
+      }
       @if (hayFiltros() || tabla.busqueda()) {
         <button type="button" class="btn btn-sm btn-fantasma" (click)="limpiarFiltros()"><app-icon name="cerrar" [size]="15" /> Limpiar</button>
       }
@@ -85,7 +90,8 @@
                     <div><strong>{{ v.nombreCliente }}</strong><small class="mono">{{ v.documentoCliente }}</small></div>
                   </div>
                 </td>
-                <td class="nowrap">{{ v.fecha | date: 'd MMM y' }}</td>
+                <td class="nowrap">{{ v.fecha | date: 'd MMM y' }}
+                  @if (v.emitidaPor) { <small class="muted" style="display: block">por {{ v.emitidaPor }}</small> }</td>
                 <td class="right num">{{ soles(v.montoSinIgv) }}</td>
                 <td class="right num muted">{{ soles(v.igv) }}</td>
                 <td class="right num"><strong [style.text-decoration]="v.estado === 'ANULADA' ? 'line-through' : null">{{ soles(v.montoTotal) }}</strong></td>

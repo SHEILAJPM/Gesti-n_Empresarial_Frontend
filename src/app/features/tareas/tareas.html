@@ -1,0 +1,133 @@
+<div class="pila">
+  <app-page-header seccion="General" titulo="Tareas"
+    descripcion="Asigna trabajo al personal. Cada trabajador ve sus tareas en «Mis tareas», las empieza y las marca como terminadas.">
+    <button type="button" class="btn btn-primario" (click)="abrir()"><app-icon name="mas" [size]="17" /> Nueva tarea</button>
+  </app-page-header>
+
+  <section class="grid-kpi escalonado">
+    <app-stat-card style="--i: 0" titulo="Abiertas" [valor]="conteo().abiertas" icono="tareas" [cargando]="cargando()"
+      [detalle]="conteo().enProceso + ' en proceso'" />
+    <app-stat-card style="--i: 1" titulo="Vencidas" [valor]="conteo().vencidas" icono="alerta" tono="peligro" [cargando]="cargando()"
+      detalle="pasaron su fecha límite" />
+    <app-stat-card style="--i: 2" titulo="Terminadas" [valor]="conteo().hechas" icono="checkCirculo" tono="exito" [cargando]="cargando()" />
+  </section>
+
+  <article class="card entrada">
+    <nav class="pestanas" aria-label="Estado de las tareas">
+      @for (p of pestanas; track p.id) {
+        <button type="button" [class.activa]="pestana() === p.id" (click)="cambiarPestana(p.id)">
+          {{ p.titulo }} <span class="contador num">{{ conteo()[p.id] }}</span>
+        </button>
+      }
+    </nav>
+
+    <div class="filtros">
+      <div class="control-icono busqueda">
+        <app-icon name="buscar" [size]="16" />
+        <input #b class="control" placeholder="Tarea, trabajador o área…" [value]="tabla.busqueda()" (input)="tabla.buscar(b.value)" />
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="card-cuerpo pila">
+        @for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 44px"></div> }
+      </div>
+    } @else if (tabla.filtradas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th class="ordenable" (click)="tabla.ordenarPor('titulo')">Tarea {{ tabla.flecha('titulo') }}</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('trabajador')">Asignada a {{ tabla.flecha('trabajador') }}</th>
+              <th>Prioridad</th>
+              <th class="ordenable" (click)="tabla.ordenarPor('fechaLimite')">Límite {{ tabla.flecha('fechaLimite') }}</th>
+              <th>Estado</th>
+              <th class="right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of tabla.visibles(); track t.id; let i = $index) {
+              <tr [style.--i]="i">
+                <td>
+                  <strong>{{ t.titulo }}</strong>
+                  <small class="muted" style="display: block">Asignada por {{ t.creadaPor }} · {{ t.creadaEn | date: 'd MMM' }}</small>
+                  @if (t.comentario) { <small class="ink-2" style="display: block">«{{ t.comentario }}»</small> }
+                </td>
+                <td>
+                  <div class="celda-persona">
+                    <span class="avatar" [style.background]="colorAvatar(t.trabajador)">{{ iniciales(t.trabajador) }}</span>
+                    <div><strong>{{ t.trabajador }}</strong><small>{{ t.area || '—' }}</small></div>
+                  </div>
+                </td>
+                <td><span class="badge" [class]="prioridades[t.prioridad].clase">{{ prioridades[t.prioridad].texto }}</span></td>
+                <td class="nowrap" [style.color]="t.vencida ? 'var(--danger)' : null">
+                  {{ t.fechaLimite ? (t.fechaLimite | date: 'd MMM y') : '—' }}
+                  @if (t.vencida) { <small style="display: block">Vencida</small> }
+                  @if (t.completadaEn) { <small class="muted" style="display: block">Terminada el {{ t.completadaEn | date: 'd MMM, HH:mm' }}</small> }
+                </td>
+                <td><span class="badge punto" [class]="estados[t.estado].clase">{{ estados[t.estado].texto }}</span></td>
+                <td>
+                  <div class="acciones" style="opacity: 1">
+                    @if (t.estado === 'PENDIENTE' || t.estado === 'EN_PROCESO') {
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="abrir(t)" aria-label="Editar"><app-icon name="editar" [size]="16" /></button>
+                      <button type="button" class="btn btn-fantasma btn-icono btn-sm" (click)="cancelar(t)" aria-label="Cancelar"><app-icon name="anular" [size]="16" /></button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginador [pagina]="tabla.pagina()" [paginas]="tabla.paginas()" [total]="tabla.filtradas().length"
+        [tamano]="tabla.tamano" (cambiar)="tabla.pagina.set($event)" />
+    } @else {
+      <app-vacio icono="tareas" [titulo]="tareas().length ? 'Nada en esta vista' : 'Aún no hay tareas'"
+        [texto]="tareas().length ? 'Prueba con otra pestaña o término.' : 'Asigna la primera con «Nueva tarea».'" />
+    }
+  </article>
+</div>
+
+<app-panel [abierto]="panelAbierto()" (cerrar)="panelAbierto.set(false)" etiqueta="Tareas"
+  [titulo]="editando() ? 'Editar tarea' : 'Nueva tarea'" descripcion="El trabajador la verá en «Mis tareas» y en su campana de avisos.">
+  <form id="form-tarea" class="form-grid" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo completo">
+      <label for="t-titulo">Qué hay que hacer</label>
+      <input id="t-titulo" class="control" formControlName="titulo" maxlength="150" placeholder="Ej. Conteo físico del almacén" />
+      <app-error-campo [control]="form.controls.titulo" />
+    </div>
+    <div class="campo completo">
+      <label for="t-desc">Detalle <span class="muted">(opcional)</span></label>
+      <textarea id="t-desc" class="control" rows="3" maxlength="1000" formControlName="descripcion"
+        placeholder="Indicaciones, dónde, con quién…"></textarea>
+    </div>
+    <div class="campo completo">
+      <label for="t-trab">Asignar a</label>
+      <select id="t-trab" class="control" formControlName="trabajadorId">
+        <option [ngValue]="0" disabled>Elige a un trabajador…</option>
+        @for (a of asignables(); track a.id) {
+          <option [ngValue]="a.id">{{ a.nombres }}{{ a.area ? ' · ' + a.area : '' }}</option>
+        }
+      </select>
+      <app-error-campo [control]="form.controls.trabajadorId" [mensajes]="{ min: 'Elige a quién se asigna.' }" />
+    </div>
+    <div class="campo">
+      <label for="t-prio">Prioridad</label>
+      <select id="t-prio" class="control" formControlName="prioridad">
+        <option value="ALTA">Alta</option>
+        <option value="MEDIA">Media</option>
+        <option value="BAJA">Baja</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="t-limite">Fecha límite <span class="muted">(opcional)</span></label>
+      <input id="t-limite" type="date" class="control" formControlName="fechaLimite" [min]="editando() ? null : hoy" />
+    </div>
+  </form>
+  <ng-container ngProjectAs="[pie]">
+    <button type="button" class="btn" (click)="panelAbierto.set(false)">Cancelar</button>
+    <button type="submit" form="form-tarea" class="btn btn-primario" [disabled]="guardando()">
+      @if (guardando()) { <span class="spinner"></span> Guardando… } @else { <app-icon name="check" [size]="17" /> {{ editando() ? 'Guardar' : 'Asignar' }} }
+    </button>
+  </ng-container>
+</app-panel>

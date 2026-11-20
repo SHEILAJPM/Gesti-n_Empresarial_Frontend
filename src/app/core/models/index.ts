@@ -42,6 +42,9 @@ export interface Trabajador {
   numeroCuenta: string | null;
   fechaCese: string | null;
   motivoCese: string | null;
+  /* Turno propio (HH:mm:ss); null = horario de la sede */
+  horaEntrada: string | null;
+  horaSalida: string | null;
 }
 
 export interface TrabajadorRequest {
@@ -59,6 +62,8 @@ export interface TrabajadorRequest {
   afp: string;
   banco: string;
   numeroCuenta: string;
+  horaEntrada: string | null;
+  horaSalida: string | null;
 }
 
 export interface CeseRequest {
@@ -217,6 +222,8 @@ export interface Venta {
   items: VentaItem[];
   cuotas: VentaCuota[];
   montoEnLetras: string | null;
+  /* Usuario que emitió el comprobante (null en ventas anteriores a este dato) */
+  emitidaPor: string | null;
 }
 
 export type FormaPago = 'CONTADO' | 'CREDITO';
@@ -442,6 +449,12 @@ export interface PlanillaDetalle {
   neto: number;
   pagoId: number | null;
   estadoPago: EstadoPago | null;
+  /* Asistencia del mes (solo si la planilla descuenta asistencia) */
+  faltas: number;
+  diasSinGoce: number;
+  minutosTardanza: number;
+  descuentoInasistencias: number;
+  descuentoTardanzas: number;
 }
 
 export interface Planilla {
@@ -462,6 +475,7 @@ export interface Planilla {
   pagosRealizados: number;
   detalles: PlanillaDetalle[];
   omitidos: string[];
+  descuentaAsistencia: boolean;
 }
 
 export interface ErrorApi {
@@ -482,6 +496,8 @@ export interface FilaResumenAsistencia {
   minutosTardanza: number;
   horasTrabajadas: number;
   diasSinSalida: number;
+  /* Días con vacaciones, descanso médico o permiso aprobados: no son faltas */
+  diasJustificados: number;
 }
 
 /* Resumen mensual de asistencia según el horario de la sede */
@@ -655,4 +671,146 @@ export interface GuiaRequest {
   llegadaDireccion: string;
   observaciones?: string | null;
   items?: { codigo: string | null; descripcion: string; unidad: string; cantidad: number }[];
+}
+
+// ---- Tareas ----
+
+export type PrioridadTarea = 'BAJA' | 'MEDIA' | 'ALTA';
+export type EstadoTarea = 'PENDIENTE' | 'EN_PROCESO' | 'HECHA' | 'CANCELADA';
+
+export interface Tarea {
+  id: number;
+  titulo: string;
+  descripcion: string | null;
+  trabajadorId: number;
+  trabajador: string | null;
+  area: string | null;
+  prioridad: PrioridadTarea;
+  fechaLimite: string | null;
+  estado: EstadoTarea;
+  creadaPor: string;
+  creadaEn: string;
+  actualizadaEn: string;
+  completadaEn: string | null;
+  comentario: string | null;
+  vencida: boolean;
+}
+
+export interface TareaRequest {
+  titulo: string;
+  descripcion: string | null;
+  trabajadorId: number;
+  prioridad: PrioridadTarea;
+  fechaLimite: string | null;
+}
+
+export interface TrabajadorAsignable {
+  id: number;
+  nombres: string;
+  cargo: string | null;
+  area: string | null;
+}
+
+// ---- Vacaciones y permisos ----
+
+export type TipoAusencia = 'VACACIONES' | 'DESCANSO_MEDICO' | 'PERMISO_CON_GOCE' | 'PERMISO_SIN_GOCE';
+export type EstadoAusencia = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'ANULADA';
+
+export const TIPOS_AUSENCIA: { valor: TipoAusencia; texto: string; ayuda: string }[] = [
+  { valor: 'VACACIONES', texto: 'Vacaciones', ayuda: 'Se pagan. 30 días por año.' },
+  { valor: 'DESCANSO_MEDICO', texto: 'Descanso médico', ayuda: 'Se paga. Adjunta el certificado a RRHH.' },
+  { valor: 'PERMISO_CON_GOCE', texto: 'Permiso con goce', ayuda: 'Se paga.' },
+  { valor: 'PERMISO_SIN_GOCE', texto: 'Permiso sin goce', ayuda: 'No es falta, pero esos días no se pagan.' }
+];
+
+export interface Ausencia {
+  id: number;
+  trabajadorId: number;
+  trabajador: string | null;
+  area: string | null;
+  tipo: TipoAusencia;
+  tipoTexto: string;
+  conGoce: boolean;
+  desde: string;
+  hasta: string;
+  dias: number;
+  motivo: string | null;
+  estado: EstadoAusencia;
+  solicitadaPor: string;
+  solicitadaEn: string;
+  resueltaPor: string | null;
+  resueltaEn: string | null;
+  comentario: string | null;
+}
+
+export interface AusenciaRequest {
+  trabajadorId?: number | null;
+  tipo: TipoAusencia;
+  desde: string;
+  hasta: string;
+  motivo: string | null;
+}
+
+export interface SaldoVacaciones {
+  anio: number;
+  diasAnuales: number;
+  usados: number;
+  pendientes: number;
+  disponibles: number;
+}
+
+// ---- Avisos, bitácora, reportes ----
+
+export type NivelAviso = 'peligro' | 'alerta' | 'info';
+
+export interface Notificacion {
+  codigo: string;
+  nivel: NivelAviso;
+  titulo: string;
+  detalle: string;
+  ruta: string;
+  cantidad: number;
+}
+
+export interface RegistroBitacora {
+  id: number;
+  fecha: string;
+  usuario: string | null;
+  metodo: string;
+  ruta: string;
+  estadoHttp: number;
+  ip: string | null;
+}
+
+export interface SolicitudClave {
+  id: number;
+  usuarioId: number;
+  usuario: string;
+  rol: Rol;
+  solicitadaEn: string;
+}
+
+export interface VentasPorVendedor {
+  vendedor: string;
+  comprobantes: number;
+  totalSinIgv: number;
+  total: number;
+}
+
+export interface VentasPorProducto {
+  codigo: string | null;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+  totalSinIgv: number;
+}
+
+export interface VentaPorDespachar {
+  ventaId: number;
+  numeroComprobante: string;
+  fecha: string;
+  cliente: string;
+  lineas: number;
+  total: number;
+  emitidaPor: string | null;
 }

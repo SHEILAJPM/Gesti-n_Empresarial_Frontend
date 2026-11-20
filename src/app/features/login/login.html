@@ -53,6 +53,8 @@
           </button>
         </div>
         <app-error-campo [control]="form.controls.clave" [mensajes]="{ required: 'Ingresa tu contraseña.' }" />
+        <button type="button" class="olvide" (click)="pedirClave()" [disabled]="pidiendo()">¿Olvidaste tu contraseña?</button>
+        @if (avisoClave()) { <p class="aviso-clave" role="status">{{ avisoClave() }}</p> }
       </div>
 
       <button type="submit" class="btn btn-primario btn-bloque ingresar" [disabled]="enviando()">

@@ -108,7 +108,8 @@
                       </div>
                     </td>
                     <td class="right num">{{ f.diasAsistidos }}<span class="muted">/{{ f.diasLaborables }}</span></td>
-                    <td class="right num"><span [class.text-danger]="f.faltas > 0">{{ f.faltas }}</span></td>
+                    <td class="right num"><span [class.text-danger]="f.faltas > 0">{{ f.faltas }}</span>
+                      @if (f.diasJustificados) { <small class="muted" style="display: block" title="Vacaciones, descanso médico o permiso aprobados">+{{ f.diasJustificados }} justif.</small> }</td>
                     <td class="right num">
                       <span [class.text-alerta]="f.tardanzas > 0">{{ f.tardanzas }}</span>
                       @if (f.minutosTardanza) { <small class="muted" style="display: block">{{ f.minutosTardanza }} min</small> }

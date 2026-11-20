@@ -1,10 +1,11 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
 import { AuthService } from '../../core/auth/auth.service';
 import { NOMBRES_ROL } from '../../core/auth/permisos';
-import { ROLES_PERSONAL, Rol, Trabajador, Usuario } from '../../core/models';
+import { ROLES_PERSONAL, Rol, Trabajador, Usuario, SolicitudClave } from '../../core/models';
 import { ConfirmService } from '../../core/ui/confirm.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { ErrorCampo, PageHeader, Paginador, Vacio } from '../../shared/bloques';
@@ -27,9 +28,17 @@ const DESCRIPCION_ROL: Record<Rol, string> = {
 
 @Component({
   selector: 'app-usuarios',
-  imports: [ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo, CambiarClave],
+  imports: [DatePipe, ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo, CambiarClave],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './usuarios.html'
+  templateUrl: './usuarios.html',
+  styles: `
+    .pedidos-clave { border-color: var(--accent); }
+    .pedidos-clave h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
+    .pedidos-clave p { margin: 4px 0 0; font-size: 13px; }
+    .pedidos-clave ul { list-style: none; margin: 0; padding: 0 20px 14px; }
+    .pedidos-clave li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0;
+      border-top: 1px solid var(--border); flex-wrap: wrap; }
+  `
 })
 export class Usuarios {
   private readonly api = inject(ApiService);
@@ -68,6 +77,19 @@ export class Usuarios {
 
   constructor() {
     this.cargar();
+    this.cargarSolicitudes();
+  }
+
+  /* Pedidos de "olvidé mi contraseña" sin atender */
+  protected readonly solicitudes = signal<SolicitudClave[]>([]);
+
+  protected cargarSolicitudes(): void {
+    this.api.usuarios.solicitudesClave().subscribe({ next: (l) => this.solicitudes.set(l), error: () => this.solicitudes.set([]) });
+  }
+
+  protected restablecerPedido(usuarioId: number): void {
+    const u = this.usuarios().find((x) => x.id === usuarioId);
+    if (u) this.claveDe.set(u);
   }
 
   protected cargar(): void {

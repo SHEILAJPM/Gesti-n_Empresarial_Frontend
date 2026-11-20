@@ -3,18 +3,23 @@ import { ChangeDetectionStrategy, Component, inject, input, isDevMode, signal } 
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { mensajeDeError } from '../../core/api/errores';
+import { ApiService } from '../../core/api/api.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { SISTEMA } from '../../core/config/constantes';
 import { ThemeService } from '../../core/ui/theme.service';
 import { ErrorCampo } from '../../shared/bloques';
 import { Icon } from '../../shared/icon';
 
-/* Usuarios que crea UsuarioInicializador en el backend; solo se muestran en desarrollo */
+/* Usuarios que crean UsuarioInicializador y UsuariosDemoInicializador (perfil local) en el backend;
+   solo se muestran en desarrollo */
 const CUENTAS_DEMO = [
   { usuario: 'admin', clave: 'Admin123', rol: 'Administrador' },
   { usuario: 'rrhh1', clave: 'Rrhh123', rol: 'RR. HH.' },
   { usuario: 'contabilidad1', clave: 'Conta123', rol: 'Contabilidad' },
-  { usuario: 'administracion1', clave: 'AdminArea123', rol: 'Administración' }
+  { usuario: 'administracion1', clave: 'AdminArea123', rol: 'Administración' },
+  { usuario: 'vendedor1', clave: 'Vende123', rol: 'Vendedor' },
+  { usuario: 'almacen1', clave: 'Almacen123', rol: 'Almacén' },
+  { usuario: 'trabajador1', clave: 'Trabaja123', rol: 'Trabajador' }
 ];
 
 @Component({
@@ -45,6 +50,30 @@ export class Login {
     usuario: ['', Validators.required],
     clave: ['', Validators.required]
   });
+
+  /* "Olvidé mi contraseña": el pedido le llega al administrador, que pone una clave nueva */
+  private readonly api = inject(ApiService);
+  protected readonly pidiendo = signal(false);
+  protected readonly avisoClave = signal('');
+
+  protected pedirClave(): void {
+    const usuario = this.form.controls.usuario.value.trim();
+    if (!usuario) {
+      this.avisoClave.set('Escribe primero tu usuario y vuelve a pulsar «¿Olvidaste tu contraseña?».');
+      return;
+    }
+    this.pidiendo.set(true);
+    this.api.cuenta.olvideClave(usuario).subscribe({
+      next: (r) => {
+        this.avisoClave.set(r.mensaje);
+        this.pidiendo.set(false);
+      },
+      error: () => {
+        this.avisoClave.set('No se pudo enviar el pedido. Avisa directamente al administrador.');
+        this.pidiendo.set(false);
+      }
+    });
+  }
 
   protected usarCuenta(cuenta: (typeof CUENTAS_DEMO)[number]): void {
     this.form.setValue({ usuario: cuenta.usuario, clave: cuenta.clave });

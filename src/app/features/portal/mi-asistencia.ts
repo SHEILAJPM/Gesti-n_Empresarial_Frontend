@@ -5,7 +5,7 @@ import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
 import { NOMBRES_ROL } from '../../core/auth/permisos';
-import { Marcacion, MiPerfil } from '../../core/models';
+import { FilaResumenAsistencia, Marcacion, MiPerfil } from '../../core/models';
 import { ToastService } from '../../core/ui/toast.service';
 import { Paginador, Vacio } from '../../shared/bloques';
 import { FotoAsistencia } from '../../shared/foto-asistencia';
@@ -13,6 +13,7 @@ import { colorAvatar, distanciaMetros, hoyIso, iniciales } from '../../shared/fo
 import { Icon } from '../../shared/icon';
 import { Mapa, Posicion } from '../../shared/mapa';
 import { Panel } from '../../shared/panel';
+import { StatCard } from '../../shared/stat-card';
 import { TablaEstado } from '../../shared/tabla';
 import { CamaraMarcacion, DatosSello, FotoCapturada } from './camara-marcacion';
 
@@ -22,7 +23,7 @@ type EstadoGps = 'buscando' | 'listo' | 'denegado' | 'no-disponible' | 'inseguro
    Aquí solo se muestra una vista previa de la distancia; el backend vuelve a calcularla y decide. */
 @Component({
   selector: 'app-mi-asistencia',
-  imports: [DatePipe, DecimalPipe, Icon, Mapa, Paginador, Vacio, CamaraMarcacion, Panel, FotoAsistencia],
+  imports: [DatePipe, DecimalPipe, Icon, Mapa, Paginador, Vacio, CamaraMarcacion, Panel, FotoAsistencia, StatCard],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './mi-asistencia.html',
   styleUrl: './mi-asistencia.scss'
@@ -109,6 +110,18 @@ export class MiAsistencia {
     destroy.onDestroy(() => clearInterval(reloj));
     this.cargar();
     this.seguirUbicacion(destroy);
+    this.cargarResumen();
+  }
+
+  /* Resumen del mes: asistidos, tardanzas y faltas según su horario (lo mismo que ve RRHH) */
+  protected readonly resumenMes = signal<FilaResumenAsistencia | null>(null);
+
+  private cargarResumen(): void {
+    const hoy = new Date();
+    this.api.portal.miResumen(hoy.getFullYear(), hoy.getMonth() + 1).subscribe({
+      next: (r) => this.resumenMes.set(r),
+      error: () => this.resumenMes.set(null)
+    });
   }
 
   protected cargar(): void {

@@ -181,9 +181,9 @@ export class Asistencia {
     };
     const filas = [
       ['Trabajador', 'DNI', 'Área', 'Días laborables', 'Días asistidos', 'Faltas', 'Tardanzas',
-        'Minutos de tardanza', 'Horas trabajadas', 'Días sin salida'],
+        'Minutos de tardanza', 'Horas trabajadas', 'Días sin salida', 'Días justificados'],
       ...r.trabajadores.map((f) => [f.nombres, f.documento, f.area, f.diasLaborables, f.diasAsistidos, f.faltas,
-        f.tardanzas, f.minutosTardanza, String(f.horasTrabajadas).replace('.', ','), f.diasSinSalida])
+        f.tardanzas, f.minutosTardanza, String(f.horasTrabajadas).replace('.', ','), f.diasSinSalida, f.diasJustificados])
     ];
     const contenido = '﻿' + filas.map((fila) => fila.map(celda).join(';')).join('\r\n');
     const url = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8' }));

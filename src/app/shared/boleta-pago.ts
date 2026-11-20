@@ -38,7 +38,13 @@ import { soles } from './formato';
       <section class="conceptos">
         <div>
           <h3>Ingresos</h3>
-          <p><span>Remuneración básica{{ d.diasLaborados < 30 ? ' (' + d.diasLaborados + '/30 días)' : '' }}</span><span class="num">{{ soles(d.remuneracionBruta) }}</span></p>
+          <p><span>Remuneración básica{{ d.diasLaborados < 30 ? ' (' + d.diasLaborados + '/30 días)' : '' }}</span><span class="num">{{ soles(d.remuneracionBruta + d.descuentoInasistencias + d.descuentoTardanzas) }}</span></p>
+          @if (d.descuentoInasistencias > 0) {
+            <p><span>Inasistencias ({{ d.faltas }} faltas{{ d.diasSinGoce ? ', ' + d.diasSinGoce + ' días sin goce' : '' }})</span><span class="num">−{{ soles(d.descuentoInasistencias) }}</span></p>
+          }
+          @if (d.descuentoTardanzas > 0) {
+            <p><span>Tardanzas ({{ d.minutosTardanza }} min)</span><span class="num">−{{ soles(d.descuentoTardanzas) }}</span></p>
+          }
           <p class="total"><span>Total ingresos</span><span class="num">{{ soles(d.remuneracionBruta) }}</span></p>
         </div>
         <div>

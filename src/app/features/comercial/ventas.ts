@@ -53,6 +53,9 @@ export class Ventas {
   protected readonly filtroEstado = signal('');
   protected readonly desde = signal('');
   protected readonly hasta = signal('');
+  /* El vendedor ve primero sus propias ventas (puede quitar el filtro para ver todas) */
+  protected readonly miUsuario = this.auth.sesion()?.usuario ?? '';
+  protected readonly soloMias = signal(this.auth.rol() === 'VENDEDOR');
 
   protected readonly tabla = new TablaEstado(
     this.ventas,
@@ -63,9 +66,10 @@ export class Ventas {
       const estado = this.filtroEstado();
       const desde = this.desde();
       const hasta = this.hasta();
+      const mias = this.soloMias();
       return (v: Venta) =>
         (!tipo || v.tipoComprobante === tipo) && (!estado || v.estado === estado) &&
-        (!desde || v.fecha >= desde) && (!hasta || v.fecha <= hasta);
+        (!desde || v.fecha >= desde) && (!hasta || v.fecha <= hasta) && (!mias || v.emitidaPor === this.miUsuario);
     })
   );
 

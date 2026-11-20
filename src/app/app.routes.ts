@@ -29,6 +29,42 @@ export const routes: Routes = [
         loadComponent: () => import('./features/portal/mis-boletas').then((m) => m.MisBoletas)
       },
       {
+        path: 'mis-tareas',
+        title: 'Mis tareas · Nexo',
+        canActivate: [fichaGuard],
+        loadComponent: () => import('./features/portal/mis-tareas').then((m) => m.MisTareas)
+      },
+      {
+        path: 'mis-ausencias',
+        title: 'Vacaciones y permisos · Nexo',
+        canActivate: [fichaGuard],
+        loadComponent: () => import('./features/portal/mis-ausencias').then((m) => m.MisAusencias)
+      },
+      {
+        path: 'tareas',
+        title: 'Tareas · Nexo',
+        data: { permiso: 'tareas.ver' },
+        loadComponent: () => import('./features/tareas/tareas').then((m) => m.Tareas)
+      },
+      {
+        path: 'ausencias',
+        title: 'Vacaciones y permisos · Nexo',
+        data: { permiso: 'ausencias.ver' },
+        loadComponent: () => import('./features/personal/ausencias').then((m) => m.Ausencias)
+      },
+      {
+        path: 'reportes-ventas',
+        title: 'Reportes de ventas · Nexo',
+        data: { permiso: 'ventas.reportes' },
+        loadComponent: () => import('./features/comercial/reportes-ventas').then((m) => m.ReportesVentas)
+      },
+      {
+        path: 'bitacora',
+        title: 'Bitácora · Nexo',
+        data: { permiso: 'bitacora.ver' },
+        loadComponent: () => import('./features/sistema/bitacora').then((m) => m.Bitacora)
+      },
+      {
         path: 'sin-acceso',
         title: 'Sin módulos · Nexo',
         loadComponent: () => import('./features/sistema/sin-acceso').then((m) => m.SinAcceso)

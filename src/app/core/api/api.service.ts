@@ -7,7 +7,9 @@ import {
   Marcacion, MarcarRequest, Pago, PagoRequest, Planilla, Proveedor, ProveedorRequest, ResumenAsistencia, ResumenTributario, Simulacion,
   Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest, Producto, ProductoRequest,
   MotivosNota, Nota, NotaRequest, Guia, GuiaRequest, CuentaPorCobrar, EstadoDeCuenta, MedioPago, ResumenCobranza,
-  CompraParaIngreso, Kardex, MotivosInventario, MovimientoRequest, MovimientoStock, ProductoStock
+  CompraParaIngreso, Kardex, MotivosInventario, MovimientoRequest, MovimientoStock, ProductoStock,
+  Tarea, TareaRequest, EstadoTarea, TrabajadorAsignable, Ausencia, AusenciaRequest, SaldoVacaciones, Notificacion,
+  RegistroBitacora, SolicitudClave, VentasPorVendedor, VentasPorProducto, VentaPorDespachar, FilaResumenAsistencia
 } from '../models';
 import type { RespuestaLogin } from '../auth/auth.service';
 
@@ -39,6 +41,8 @@ export class ApiService {
   };
 
   readonly cuenta = {
+    /* Público: el pedido le llega al administrador */
+    olvideClave: (usuario: string) => this.post<{ mensaje: string }>('/api/auth/olvide-clave', { usuario }),
     /* Devuelve un token nuevo: las demás sesiones del usuario se cierran */
     cambiarClave: (claveActual: string, claveNueva: string) =>
       this.put<RespuestaLogin>('/api/auth/clave', { claveActual, claveNueva })
@@ -148,7 +152,47 @@ export class ApiService {
       this.post<Marcacion>('/api/mi/asistencia', datos),
     miFoto: (marcacionId: number) => this.imagen(`/api/mi/asistencia/${marcacionId}/foto`),
     misMarcaciones: () => this.get<Marcacion[]>('/api/mi/asistencia'),
-    misBoletas: () => this.get<MiBoleta[]>('/api/mi/boletas')
+    misBoletas: () => this.get<MiBoleta[]>('/api/mi/boletas'),
+    miResumen: (anio: number, mes: number) => this.get<FilaResumenAsistencia>('/api/mi/asistencia/resumen', { anio, mes }),
+    misTareas: () => this.get<Tarea[]>('/api/mi/tareas'),
+    avanzarTarea: (id: number, estado: EstadoTarea, comentario: string | null) =>
+      this.http.patch<Tarea>(this.url(`/api/mi/tareas/${id}/estado`), { estado, comentario }),
+    misAusencias: () => this.get<Ausencia[]>('/api/mi/ausencias'),
+    solicitarAusencia: (datos: AusenciaRequest) => this.post<Ausencia>('/api/mi/ausencias', datos),
+    retirarAusencia: (id: number) => this.http.patch<Ausencia>(this.url(`/api/mi/ausencias/${id}/retirar`), null),
+    miSaldoVacaciones: (anio: number) => this.get<SaldoVacaciones>('/api/mi/vacaciones', { anio })
+  };
+
+  readonly tareas = {
+    listar: () => this.get<Tarea[]>('/api/tareas'),
+    asignables: () => this.get<TrabajadorAsignable[]>('/api/tareas/asignables'),
+    crear: (datos: TareaRequest) => this.post<Tarea>('/api/tareas', datos),
+    actualizar: (id: number, datos: TareaRequest) => this.put<Tarea>(`/api/tareas/${id}`, datos),
+    cancelar: (id: number) => this.http.patch<Tarea>(this.url(`/api/tareas/${id}/cancelar`), null)
+  };
+
+  readonly ausencias = {
+    listar: () => this.get<Ausencia[]>('/api/ausencias'),
+    registrar: (datos: AusenciaRequest) => this.post<Ausencia>('/api/ausencias', datos),
+    resolver: (id: number, aprobar: boolean, comentario: string | null) =>
+      this.http.patch<Ausencia>(this.url(`/api/ausencias/${id}/resolver`), { aprobar, comentario }),
+    anular: (id: number) => this.http.patch<Ausencia>(this.url(`/api/ausencias/${id}/anular`), null),
+    saldo: (trabajadorId: number, anio: number) => this.get<SaldoVacaciones>(`/api/ausencias/saldo/${trabajadorId}`, { anio })
+  };
+
+  readonly notificaciones = {
+    listar: () => this.get<Notificacion[]>('/api/notificaciones')
+  };
+
+  readonly bitacora = {
+    buscar: (desde: string, hasta: string, usuario: string, limite = 500) =>
+      this.get<RegistroBitacora[]>('/api/bitacora', usuario ? { desde, hasta, usuario, limite } : { desde, hasta, limite })
+  };
+
+  readonly reportesVentas = {
+    porVendedor: (desde: string, hasta: string) => this.get<VentasPorVendedor[]>('/api/ventas/reportes/por-vendedor', { desde, hasta }),
+    porProducto: (desde: string, hasta: string) => this.get<VentasPorProducto[]>('/api/ventas/reportes/por-producto', { desde, hasta }),
+    porDespachar: () => this.get<VentaPorDespachar[]>('/api/ventas/por-despachar')
   };
 
   readonly sede = {
@@ -159,7 +203,8 @@ export class ApiService {
   readonly planillas = {
     listar: () => this.get<Planilla[]>('/api/planillas'),
     obtener: (id: number) => this.get<Planilla>(`/api/planillas/${id}`),
-    generar: (anio: number, mes: number) => this.post<Planilla>('/api/planillas/generar', { anio, mes }),
+    generar: (anio: number, mes: number, descontarAsistencia = true) =>
+      this.post<Planilla>('/api/planillas/generar', { anio, mes, descontarAsistencia }),
     aprobar: (id: number, fechaPago: string) =>
       this.http.patch<Planilla>(this.url(`/api/planillas/${id}/aprobar`), { fechaPago }),
     eliminar: (id: number) => this.delete(`/api/planillas/${id}`)
@@ -181,6 +226,7 @@ export class ApiService {
     vincularTrabajador: (id: number, trabajadorId: number | null) =>
       this.http.patch<Usuario>(this.url(`/api/usuarios/${id}/trabajador`), { trabajadorId }),
     restablecerClave: (id: number, claveNueva: string) => this.put<Usuario>(`/api/usuarios/${id}/clave`, { claveNueva }),
+    solicitudesClave: () => this.get<SolicitudClave[]>('/api/usuarios/solicitudes-clave'),
     cambiarEstado: (id: number, activo: boolean) =>
       this.http.patch<Usuario>(this.url(`/api/usuarios/${id}/estado`), null, { params: { activo } })
   };

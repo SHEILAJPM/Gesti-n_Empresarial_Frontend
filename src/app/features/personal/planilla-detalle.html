@@ -20,6 +20,7 @@
         <div class="estado">
           @if (p.estado === 'BORRADOR') {
             <span class="badge punto badge-alerta">Borrador · pendiente de aprobación por Contabilidad</span>
+            @if (p.descuentaAsistencia) { <span class="badge badge-info">Con descuento por faltas y tardanzas</span> }
           } @else if (p.pagosRealizados === p.cantidadTrabajadores) {
             <span class="badge punto badge-exito">Pagada el {{ p.fechaPago | date: 'd MMM y' }}</span>
           } @else {
@@ -90,7 +91,15 @@
                   {{ d.diasLaborados }}
                   @if (d.diasLaborados < 30) { <small class="muted" style="display: block">prorrateado</small> }
                 </td>
-                <td class="right num">{{ soles(d.remuneracionBruta) }}</td>
+                <td class="right num">
+                  {{ soles(d.remuneracionBruta) }}
+                  @if (d.faltas || d.diasSinGoce) {
+                    <small class="nowrap" style="display: block; color: var(--danger)">−{{ soles(d.descuentoInasistencias) }} · {{ d.faltas }} faltas{{ d.diasSinGoce ? ' + ' + d.diasSinGoce + ' s/goce' : '' }}</small>
+                  }
+                  @if (d.minutosTardanza) {
+                    <small class="nowrap" style="display: block; color: var(--danger)">−{{ soles(d.descuentoTardanzas) }} · {{ d.minutosTardanza }} min tarde</small>
+                  }
+                </td>
                 <td>
                   <span class="badge" [class.badge-info]="d.sistemaPension === 'AFP'">{{ d.sistemaPension }}{{ d.afp ? ' ' + d.afp : '' }}</span>
                   <small class="muted num" style="display: block">{{ porcentaje(d.tasaPension) }}</small>

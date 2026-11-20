@@ -83,6 +83,16 @@ const BANCOS = ['BCP', 'BBVA', 'Interbank', 'Scotiabank', 'Banco de la Nación',
           <app-error-campo [control]="form.controls.sueldo" [mensajes]="{ min: 'El sueldo no puede ser negativo.' }" />
         </div>
 
+        <h4 class="form-seccion completo"><app-icon name="reloj" [size]="15" /> Turno <span class="muted" style="font-weight: 400">(opcional: si lo dejas vacío usa el horario de la sede)</span></h4>
+        <div class="campo">
+          <label for="t-entrada">Hora de entrada</label>
+          <input id="t-entrada" type="time" class="control" formControlName="horaEntrada" />
+        </div>
+        <div class="campo">
+          <label for="t-salida">Hora de salida</label>
+          <input id="t-salida" type="time" class="control" formControlName="horaSalida" />
+        </div>
+
         <h4 class="form-seccion completo"><app-icon name="billetera" [size]="15" /> Pensión y pago</h4>
         <div class="campo">
           <label for="t-pension">Sistema de pensiones</label>
@@ -151,7 +161,9 @@ export class FormTrabajador {
     sistemaPension: [''],
     afp: [''],
     banco: ['', Validators.maxLength(60)],
-    numeroCuenta: ['', Validators.pattern(/^[0-9-]{6,30}$/)]
+    numeroCuenta: ['', Validators.pattern(/^[0-9-]{6,30}$/)],
+    horaEntrada: [''],
+    horaSalida: ['']
   });
 
   /* Con el DNI (no con carné de extranjería) se traen los nombres de RENIEC, sin pisar lo escrito a mano */
@@ -187,7 +199,9 @@ export class FormTrabajador {
         sistemaPension: t?.sistemaPension ?? '',
         afp: t?.afp ?? '',
         banco: t?.banco ?? '',
-        numeroCuenta: t?.numeroCuenta ?? ''
+        numeroCuenta: t?.numeroCuenta ?? '',
+        horaEntrada: t?.horaEntrada?.slice(0, 5) ?? '',
+        horaSalida: t?.horaSalida?.slice(0, 5) ?? ''
       });
       this.consulta.reiniciar();
       if (t) {
@@ -220,7 +234,18 @@ export class FormTrabajador {
     }
     this.guardando.set(true);
     const v = this.form.getRawValue();
-    const datos = { ...v, sueldo: Number(v.sueldo), fechaNacimiento: v.fechaNacimiento || null };
+    if (!!v.horaEntrada !== !!v.horaSalida) {
+      this.toast.info('Indica la hora de entrada y la de salida del turno, o deja las dos vacías.');
+      this.guardando.set(false);
+      return;
+    }
+    const datos = {
+      ...v,
+      sueldo: Number(v.sueldo),
+      fechaNacimiento: v.fechaNacimiento || null,
+      horaEntrada: v.horaEntrada || null,
+      horaSalida: v.horaSalida || null
+    };
     const actual = this.trabajador();
     const peticion = actual ? this.api.personal.actualizar(actual.id, datos) : this.api.personal.registrar(datos);
     peticion.subscribe({

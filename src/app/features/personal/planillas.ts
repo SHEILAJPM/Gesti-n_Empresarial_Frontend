@@ -78,9 +78,11 @@ export class Planillas {
     });
   }
 
+  protected readonly descontarAsistencia = signal(true);
+
   protected generar(): void {
     this.generando.set(true);
-    this.api.planillas.generar(this.anio(), this.mes()).subscribe({
+    this.api.planillas.generar(this.anio(), this.mes(), this.descontarAsistencia()).subscribe({
       next: (p) => {
         this.toast.exito(`Planilla de ${nombrePeriodo(p)} generada con ${p.cantidadTrabajadores} trabajadores.`);
         this.generando.set(false);
