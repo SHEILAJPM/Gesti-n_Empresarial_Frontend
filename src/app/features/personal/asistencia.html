@@ -2,6 +2,8 @@
   <app-page-header seccion="Recursos humanos" titulo="Asistencia"
     descripcion="Registra entradas y salidas del personal y revisa el historial por día." />
 
+  <app-verificacion-facial (cambio)="cargar()" />
+
   <section class="grid-kpi escalonado">
     <app-stat-card style="--i: 0" titulo="Presentes ahora" [valor]="presentes()" icono="checkCirculo" tono="exito" [cargando]="cargando()"
       detalle="con entrada sin salida" />

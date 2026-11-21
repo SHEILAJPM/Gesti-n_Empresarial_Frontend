@@ -5,7 +5,8 @@ import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
 import { NOMBRES_ROL } from '../../core/auth/permisos';
-import { FilaResumenAsistencia, Marcacion, MiPerfil } from '../../core/models';
+import { FilaResumenAsistencia, Marcacion, MiPerfil, MiRostro } from '../../core/models';
+import { descriptorDeFoto, fotoComoJpeg } from '../../shared/rostro';
 import { ToastService } from '../../core/ui/toast.service';
 import { Paginador, Vacio } from '../../shared/bloques';
 import { FotoAsistencia } from '../../shared/foto-asistencia';
@@ -111,6 +112,54 @@ export class MiAsistencia {
     this.cargar();
     this.seguirUbicacion(destroy);
     this.cargarResumen();
+    this.cargarRostro();
+  }
+
+  // ---- Verificación facial ----
+
+  /* undefined: cargando · null: aún no registra su rostro */
+  protected readonly miRostro = signal<MiRostro | null | undefined>(undefined);
+  protected readonly consentimiento = signal(false);
+  protected readonly registrandoRostro = signal(false);
+
+  private cargarRostro(): void {
+    this.api.portal.miRostro().subscribe({ next: (r) => this.miRostro.set(r), error: () => this.miRostro.set(null) });
+  }
+
+  /* El trabajador se toma una selfie: se calcula su descriptor facial y se envía a RRHH para aprobarla */
+  protected async registrarRostro(evento: Event): Promise<void> {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    input.value = '';
+    if (!archivo) return;
+    if (!this.consentimiento()) {
+      this.toast.error('Primero acepta el uso de tu rostro para verificar tu asistencia.');
+      return;
+    }
+    this.registrandoRostro.set(true);
+    try {
+      const foto = await fotoComoJpeg(archivo);
+      const descriptor = await descriptorDeFoto(foto);
+      if (!descriptor) {
+        this.toast.error('No se detectó tu rostro. Tómate la foto de frente, con buena luz y sin lentes oscuros.');
+        this.registrandoRostro.set(false);
+        return;
+      }
+      this.api.portal.registrarRostro(foto, descriptor, true).subscribe({
+        next: (r) => {
+          this.miRostro.set(r);
+          this.toast.exito('Foto enviada. RRHH la revisará y desde entonces tus marcaciones se verificarán solas.');
+          this.registrandoRostro.set(false);
+        },
+        error: (e) => {
+          this.toast.error(mensajeDeError(e));
+          this.registrandoRostro.set(false);
+        }
+      });
+    } catch {
+      this.toast.error('No se pudo cargar el reconocimiento facial. Revisa tu conexión e inténtalo de nuevo.');
+      this.registrandoRostro.set(false);
+    }
   }
 
   /* Resumen del mes: asistidos, tardanzas y faltas según su horario (lo mismo que ve RRHH) */
@@ -203,11 +252,16 @@ export class MiAsistencia {
   }
 
   /* Se envían la posición con la que se selló la foto y la foto misma; el servidor decide */
-  protected enviar(captura: FotoCapturada): void {
+  protected async enviar(captura: FotoCapturada): Promise<void> {
     const p = captura.posicion;
     this.marcando.set(true);
-    this.api.portal.marcar({ latitud: p.lat, longitud: p.lng, precision: p.precision, foto: captura.foto }).subscribe({
+    // El descriptor del rostro se calcula aquí; si falla, el servidor deja la marcación pendiente para RRHH
+    const descriptor = await descriptorDeFoto(captura.foto).catch(() => null);
+    this.api.portal.marcar({ latitud: p.lat, longitud: p.lng, precision: p.precision, foto: captura.foto, descriptor }).subscribe({
       next: (m) => {
+        if (m.verificacion === 'PENDIENTE') {
+          this.toast.info('Tu marcación quedó pendiente de verificación: ' + (m.verificacionMotivo ?? 'RRHH la revisará') + '.');
+        }
         const tipo = m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida';
         this.camaraAbierta.set(false);
         const tarde = m.tipo === 'ENTRADA' ? this.minutosTarde(m.fechaHora) : 0;

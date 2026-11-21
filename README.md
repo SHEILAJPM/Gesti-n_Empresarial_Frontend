@@ -45,7 +45,16 @@ Recorridos de punta a punta:
    Por despachar y crea la guía → `contabilidad1` la ve en Reportes de ventas por vendedor y por producto.
 5. **Contraseña olvidada**: en el login, escribir el usuario y pulsar «¿Olvidaste tu contraseña?» → `admin` ve el
    pedido en Usuarios y pone una clave nueva.
-6. **Auditoría**: `admin` revisa en Bitácora quién hizo cada cambio (filtra por fecha, usuario o solo rechazados) y la exporta a CSV.
+6. **Vacaciones según ley**: `rrhh1` abre Vacaciones y permisos › Rol vacacional: Ana tiene el plazo por vencer, Miguel
+   un periodo vencido (indemnización), Jorge y Pedro ganaron sus días sin programarlos; la campana avisa de todo.
+7. **Descanso médico**: `trabajador1` pide un descanso médico; sin adjuntar el certificado no se puede enviar. RRHH lo abre
+   desde la solicitud antes de aprobar.
+8. **Verificación facial**: `vendedor1` registra su rostro en Marcar asistencia (acepta el consentimiento y se toma la foto);
+   `rrhh1` lo aprueba en Asistencia › Verificación facial. Desde ahí, si al marcar el rostro coincide la marcación queda
+   verificada; si no, queda pendiente hasta que RRHH compare las dos fotos.
+9. **Almacén**: `almacen1` ya no ve Ventas, Clientes ni Productos; en Guías tiene los pedidos por despachar (productos y
+   cantidades, sin precios).
+10. **Auditoría**: `admin` revisa en Bitácora quién hizo cada cambio (filtra por fecha, usuario o solo rechazados) y la exporta a CSV.
 
 Para marcar asistencia desde la PC, el navegador debe simular la ubicación de la sede
 (DevTools › Sensors › Location: -12.0464, -77.0428).

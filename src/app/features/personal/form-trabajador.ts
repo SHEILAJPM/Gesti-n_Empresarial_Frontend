@@ -92,6 +92,13 @@ const BANCOS = ['BCP', 'BBVA', 'Interbank', 'Scotiabank', 'Banco de la Nación',
           <label for="t-salida">Hora de salida</label>
           <input id="t-salida" type="time" class="control" formControlName="horaSalida" />
         </div>
+        <div class="campo completo">
+          <label for="t-jornada">Jornada semanal</label>
+          <select id="t-jornada" class="control" formControlName="diasPorSemana">
+            <option [ngValue]="5">5 días (lunes a viernes) · récord vacacional de 210 días</option>
+            <option [ngValue]="6">6 días (lunes a sábado) · récord vacacional de 260 días</option>
+          </select>
+        </div>
 
         <h4 class="form-seccion completo"><app-icon name="billetera" [size]="15" /> Pensión y pago</h4>
         <div class="campo">
@@ -163,7 +170,8 @@ export class FormTrabajador {
     banco: ['', Validators.maxLength(60)],
     numeroCuenta: ['', Validators.pattern(/^[0-9-]{6,30}$/)],
     horaEntrada: [''],
-    horaSalida: ['']
+    horaSalida: [''],
+    diasPorSemana: [5]
   });
 
   /* Con el DNI (no con carné de extranjería) se traen los nombres de RENIEC, sin pisar lo escrito a mano */
@@ -201,7 +209,8 @@ export class FormTrabajador {
         banco: t?.banco ?? '',
         numeroCuenta: t?.numeroCuenta ?? '',
         horaEntrada: t?.horaEntrada?.slice(0, 5) ?? '',
-        horaSalida: t?.horaSalida?.slice(0, 5) ?? ''
+        horaSalida: t?.horaSalida?.slice(0, 5) ?? '',
+        diasPorSemana: t?.diasPorSemana ?? 5
       });
       this.consulta.reiniciar();
       if (t) {
@@ -244,7 +253,8 @@ export class FormTrabajador {
       sueldo: Number(v.sueldo),
       fechaNacimiento: v.fechaNacimiento || null,
       horaEntrada: v.horaEntrada || null,
-      horaSalida: v.horaSalida || null
+      horaSalida: v.horaSalida || null,
+      diasPorSemana: Number(v.diasPorSemana)
     };
     const actual = this.trabajador();
     const peticion = actual ? this.api.personal.actualizar(actual.id, datos) : this.api.personal.registrar(datos);

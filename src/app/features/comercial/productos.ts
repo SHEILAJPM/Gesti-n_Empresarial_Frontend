@@ -150,6 +150,12 @@ const CANTIDAD = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 3 });
             </span>
             <app-error-campo [control]="form.controls.stockMinimo" />
           </div>
+          <div class="campo completo">
+            <label for="p-barras">Código de barras <span class="muted">(opcional)</span></label>
+            <input id="p-barras" class="control mono" formControlName="codigoBarras" maxlength="30" placeholder="El que trae el producto (EAN), p. ej. 7751234567890" />
+            <span class="ayuda">Almacén lo escanea con el celular al alistar pedidos. Si no tiene, se imprime una etiqueta con el código interno.</span>
+            <app-error-campo [control]="form.controls.codigoBarras" [mensajes]="{ pattern: 'De 4 a 30 letras o números.' }" />
+          </div>
         } @else {
           <p class="ayuda completo">Los servicios no manejan stock: se facturan sin pasar por el almacén.</p>
         }
@@ -198,7 +204,8 @@ export class Productos {
     descripcion: ['', [Validators.required, Validators.maxLength(250)]],
     unidad: ['NIU', Validators.required],
     valorUnitario: [0, [Validators.required, Validators.min(0)]],
-    stockMinimo: [0, [Validators.min(0)]]
+    stockMinimo: [0, [Validators.min(0)]],
+    codigoBarras: ['', Validators.pattern(/^[A-Za-z0-9._-]{4,30}$/)]
   });
   // Los servicios (ZZ, HUR) no manejan stock
   private readonly unidadActual = signal('NIU');
@@ -240,8 +247,8 @@ export class Productos {
   protected abrir(p?: Producto): void {
     this.editando.set(p ?? null);
     this.form.reset(p
-      ? { codigo: p.codigo, descripcion: p.descripcion, unidad: p.unidad, valorUnitario: p.valorUnitario, stockMinimo: p.stockMinimo }
-      : { codigo: '', descripcion: '', unidad: 'NIU', valorUnitario: 0, stockMinimo: 0 });
+      ? { codigo: p.codigo, descripcion: p.descripcion, unidad: p.unidad, valorUnitario: p.valorUnitario, stockMinimo: p.stockMinimo, codigoBarras: p.codigoBarras ?? '' }
+      : { codigo: '', descripcion: '', unidad: 'NIU', valorUnitario: 0, stockMinimo: 0, codigoBarras: '' });
     this.valorActual.set(p?.valorUnitario ?? 0);
     this.unidadActual.set(p?.unidad ?? 'NIU');
     this.panelAbierto.set(true);
@@ -253,7 +260,8 @@ export class Productos {
       return;
     }
     const crudo = this.form.getRawValue();
-    const datos = { ...crudo, valorUnitario: Number(crudo.valorUnitario), stockMinimo: this.esServicio() ? 0 : Number(crudo.stockMinimo) || 0 };
+    const datos = { ...crudo, valorUnitario: Number(crudo.valorUnitario), stockMinimo: this.esServicio() ? 0 : Number(crudo.stockMinimo) || 0,
+      codigoBarras: this.esServicio() ? null : crudo.codigoBarras.trim() || null };
     const actual = this.editando();
     this.guardando.set(true);
     (actual ? this.api.productos.actualizar(actual.id, datos) : this.api.productos.crear(datos)).subscribe({

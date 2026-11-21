@@ -192,3 +192,13 @@
 @media (max-width: 600px) {
   .ocultar-movil { display: none; }
 }
+
+.rostro-card { display: flex; gap: 16px; padding: 18px 20px; align-items: flex-start; border-color: var(--accent); }
+.rostro-icono { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; flex: none;
+  background: var(--accent-soft); color: var(--accent); }
+.rostro-texto { display: flex; flex-direction: column; gap: 10px; h3 { margin: 0; } p { margin: 0; font-size: 13.5px; } }
+.consentimiento { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; input { margin-top: 3px; } }
+.rostro-texto .btn { align-self: flex-start; cursor: pointer; }
+.rostro-texto .btn.deshabilitado { opacity: .55; pointer-events: none; }
+.rostro-aviso { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-radius: var(--radius);
+  background: var(--info-soft); font-size: 13.5px; }

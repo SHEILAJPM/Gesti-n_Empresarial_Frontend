@@ -17,6 +17,10 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@vladmandic/face-api": "^1.7.15",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
+    "jsbarcode": "^3.12.1",
     "leaflet": "^1.9.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

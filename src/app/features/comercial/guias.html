@@ -9,28 +9,34 @@
   @if (puedeEmitir && porDespachar().length) {
     <article class="card entrada">
       <header class="card-cabecera">
-        <div><h3 style="margin: 0; display: flex; gap: 8px; align-items: center"><app-icon name="camion" [size]="17" /> Por despachar
+        <div><h3 style="margin: 0; display: flex; gap: 8px; align-items: center"><app-icon name="camion" [size]="17" /> Pedidos por despachar
           <span class="contador num">{{ porDespachar().length }}</span></h3>
-          <p class="muted" style="margin: 4px 0 0; font-size: 13px">Ventas de los últimos 60 días con mercadería y sin guía de remisión.</p></div>
+          <p class="muted" style="margin: 4px 0 0; font-size: 13px">Lo que pidió cada cliente y aún no tiene guía (últimos 60 días).</p></div>
       </header>
-      <div class="tabla-contenedor">
-        <table class="tabla">
-          <thead><tr><th>Comprobante</th><th>Cliente</th><th>Fecha</th><th class="right">Líneas</th><th>Vendió</th><th class="right"></th></tr></thead>
-          <tbody>
-            @for (v of porDespachar(); track v.ventaId) {
-              <tr>
-                <td class="mono"><strong>{{ v.numeroComprobante }}</strong></td>
-                <td>{{ v.cliente }}</td>
-                <td class="nowrap">{{ v.fecha | date: 'd MMM' }}</td>
-                <td class="right num">{{ v.lineas }}</td>
-                <td class="muted">{{ v.emitidaPor || '—' }}</td>
-                <td class="right">
-                  <a class="btn btn-sm btn-primario" routerLink="/guias" [queryParams]="{ venta: v.ventaId }"><app-icon name="camion" [size]="15" /> Crear guía</a>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      <div class="lista-despachos">
+        @for (d of porDespachar(); track d.ventaId) {
+          <div class="despacho">
+            <div class="cabeza">
+              <div><strong>{{ d.cliente }}</strong> <span class="muted mono">· {{ d.numeroComprobante }} · {{ d.fecha | date: 'd MMM' }}</span></div>
+              <div style="display: flex; gap: 6px; align-items: center">
+                <span class="badge punto" [class.badge-exito]="d.estadoAlistamiento === 'LISTO'" [class.badge-info]="d.estadoAlistamiento === 'EN_PROCESO'"
+                  [class.badge-alerta]="d.estadoAlistamiento === 'PENDIENTE'">
+                  {{ d.estadoAlistamiento === 'LISTO' ? 'Alistado' : d.estadoAlistamiento === 'EN_PROCESO' ? 'Alistando ' + d.unidadesAlistadas + '/' + d.unidadesPedidas : 'Por alistar' }}
+                </span>
+                @if (d.estadoAlistamiento !== 'LISTO' && puedeAlistar) {
+                  <a class="btn btn-sm" [routerLink]="['/despachos', d.ventaId]"><app-icon name="camara" [size]="15" /> Alistar</a>
+                }
+                <a class="btn btn-sm btn-primario" routerLink="/guias" [queryParams]="{ venta: d.ventaId }"><app-icon name="camion" [size]="15" /> Crear guía</a>
+              </div>
+            </div>
+            <ul>
+              @for (i of d.items; track $index) {
+                <li><span class="num cant">{{ i.cantidad | number: '1.0-3' }} {{ i.unidad }}</span> {{ i.descripcion }}
+                  @if (i.codigo) { <span class="muted mono">({{ i.codigo }})</span> }</li>
+              }
+            </ul>
+          </div>
+        }
       </div>
     </article>
   }

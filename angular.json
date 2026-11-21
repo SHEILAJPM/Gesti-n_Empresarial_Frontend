@@ -2,7 +2,8 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "npm",
+    "analytics": "e93a2cf5-87de-4ac3-9502-81522a25b510"
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -45,11 +46,16 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "allowedCommonJsDependencies": ["leaflet"],
+            "allowedCommonJsDependencies": ["leaflet", "jsbarcode"],
             "assets": [
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "{tiny_face_detector,face_landmark_68_model,face_recognition_model}*",
+                "input": "node_modules/@vladmandic/face-api/model",
+                "output": "models"
               }
             ],
             "styles": [

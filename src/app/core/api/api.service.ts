@@ -8,8 +8,8 @@ import {
   Trabajador, TrabajadorRequest, Usuario, UsuarioRequest, Venta, VentaRequest, Producto, ProductoRequest,
   MotivosNota, Nota, NotaRequest, Guia, GuiaRequest, CuentaPorCobrar, EstadoDeCuenta, MedioPago, ResumenCobranza,
   CompraParaIngreso, Kardex, MotivosInventario, MovimientoRequest, MovimientoStock, ProductoStock,
-  Tarea, TareaRequest, EstadoTarea, TrabajadorAsignable, Ausencia, AusenciaRequest, SaldoVacaciones, Notificacion,
-  RegistroBitacora, SolicitudClave, VentasPorVendedor, VentasPorProducto, VentaPorDespachar, FilaResumenAsistencia
+  Tarea, TareaRequest, EstadoTarea, TrabajadorAsignable, Ausencia, AusenciaRequest, Notificacion,
+  RegistroBitacora, SolicitudClave, Despacho, Escaneo, ResumenVacaciones, MiRostro, RostroRegistrado, MarcacionPorVerificar, VentasPorVendedor, VentasPorProducto, VentaPorDespachar, FilaResumenAsistencia
 } from '../models';
 import type { RespuestaLogin } from '../auth/auth.service';
 
@@ -148,7 +148,7 @@ export class ApiService {
   readonly portal = {
     perfil: () => this.get<MiPerfil>('/api/mi/perfil'),
     /* foto: JPEG en Base64 tomado con la cámara, con la ubicación impresa */
-    marcar: (datos: { latitud: number; longitud: number; precision: number; foto: string }) =>
+    marcar: (datos: { latitud: number; longitud: number; precision: number; foto: string; descriptor?: number[] | null }) =>
       this.post<Marcacion>('/api/mi/asistencia', datos),
     miFoto: (marcacionId: number) => this.imagen(`/api/mi/asistencia/${marcacionId}/foto`),
     misMarcaciones: () => this.get<Marcacion[]>('/api/mi/asistencia'),
@@ -160,7 +160,12 @@ export class ApiService {
     misAusencias: () => this.get<Ausencia[]>('/api/mi/ausencias'),
     solicitarAusencia: (datos: AusenciaRequest) => this.post<Ausencia>('/api/mi/ausencias', datos),
     retirarAusencia: (id: number) => this.http.patch<Ausencia>(this.url(`/api/mi/ausencias/${id}/retirar`), null),
-    miSaldoVacaciones: (anio: number) => this.get<SaldoVacaciones>('/api/mi/vacaciones', { anio })
+    misVacaciones: () => this.get<ResumenVacaciones>('/api/mi/vacaciones'),
+    miDocumento: (ausenciaId: number) => this.imagen(`/api/mi/ausencias/${ausenciaId}/documento`),
+    /* 204 (null) si todavía no registró su rostro */
+    miRostro: () => this.http.get<MiRostro | null>(this.url('/api/mi/rostro')),
+    registrarRostro: (foto: string, descriptor: number[], consentimiento: boolean) =>
+      this.post<MiRostro>('/api/mi/rostro', { foto, descriptor, consentimiento })
   };
 
   readonly tareas = {
@@ -177,7 +182,28 @@ export class ApiService {
     resolver: (id: number, aprobar: boolean, comentario: string | null) =>
       this.http.patch<Ausencia>(this.url(`/api/ausencias/${id}/resolver`), { aprobar, comentario }),
     anular: (id: number) => this.http.patch<Ausencia>(this.url(`/api/ausencias/${id}/anular`), null),
-    saldo: (trabajadorId: number, anio: number) => this.get<SaldoVacaciones>(`/api/ausencias/saldo/${trabajadorId}`, { anio })
+    rolVacacional: () => this.get<ResumenVacaciones[]>('/api/ausencias/vacaciones'),
+    vacacionesDe: (trabajadorId: number) => this.get<ResumenVacaciones>(`/api/ausencias/vacaciones/${trabajadorId}`),
+    documento: (ausenciaId: number) => this.imagen(`/api/ausencias/${ausenciaId}/documento`)
+  };
+
+  readonly verificacion = {
+    rostros: () => this.get<RostroRegistrado[]>('/api/rostros'),
+    fotoRostro: (trabajadorId: number) => this.imagen(`/api/rostros/${trabajadorId}/foto`),
+    resolverRostro: (trabajadorId: number, aprobar: boolean, motivo: string | null) =>
+      this.http.patch<void>(this.url(`/api/rostros/${trabajadorId}/resolver`), { aprobar, motivo }),
+    porVerificar: () => this.get<MarcacionPorVerificar[]>('/api/asistencia/por-verificar'),
+    resolverMarcacion: (id: number, aprobar: boolean) =>
+      this.http.patch<void>(this.url(`/api/asistencia/marcaciones/${id}/verificar`), { aprobar, motivo: null })
+  };
+
+  readonly despachos = {
+    pendientes: () => this.get<Despacho[]>('/api/despachos'),
+    obtener: (ventaId: number) => this.get<Despacho>(`/api/despachos/${ventaId}`),
+    escanear: (ventaId: number, codigo: string) => this.post<Escaneo>(`/api/despachos/${ventaId}/escaneos`, { codigo }),
+    fijar: (ventaId: number, orden: number, cantidad: number) => this.put<Despacho>(`/api/despachos/${ventaId}/lineas/${orden}`, { cantidad }),
+    listo: (ventaId: number, observacion: string | null) => this.post<Despacho>(`/api/despachos/${ventaId}/listo`, { observacion }),
+    reabrir: (ventaId: number) => this.post<Despacho>(`/api/despachos/${ventaId}/reabrir`, null)
   };
 
   readonly notificaciones = {

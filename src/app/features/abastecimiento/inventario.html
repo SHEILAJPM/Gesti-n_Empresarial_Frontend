@@ -1,6 +1,7 @@
 <div class="pila">
   <app-page-header seccion="Abastecimiento" titulo="Inventario"
     descripcion="Stock de cada producto y su kárdex. Las ventas lo descuentan solas; los ingresos, salidas y conteos se registran aquí.">
+    <a class="btn" routerLink="/etiquetas"><app-icon name="documento" [size]="16" /> Imprimir etiquetas</a>
     @if (puedeMover) {
       <button type="button" class="btn" (click)="abrirMovimiento('AJUSTE')"><app-icon name="calculadora" [size]="16" /> Conteo físico</button>
       <button type="button" class="btn" (click)="abrirMovimiento('SALIDA')"><app-icon name="subida" [size]="16" /> Salida</button>

@@ -89,6 +89,33 @@
       </article>
     </div>
 
+    @if (miRostro() === null || miRostro()?.estado === 'RECHAZADO') {
+      <article class="card entrada rostro-card">
+        <div class="rostro-icono"><app-icon name="usuario" [size]="26" /></div>
+        <div class="rostro-texto">
+          <h3>{{ miRostro()?.estado === 'RECHAZADO' ? 'RRHH rechazó tu foto' : 'Registra tu rostro' }}</h3>
+          <p class="ink-2">
+            @if (miRostro()?.motivoRechazo) { Motivo: {{ miRostro()!.motivoRechazo }}. }
+            Con tu foto de referencia, el sistema verifica que eres tú cada vez que marcas. Sin ella, tus marcaciones quedan
+            pendientes hasta que RRHH las revise.
+          </p>
+          <label class="consentimiento">
+            <input type="checkbox" [checked]="consentimiento()" (change)="consentimiento.set($any($event.target).checked)" />
+            <span>Autorizo el uso de mi rostro (dato biométrico) solo para verificar mi asistencia, conforme a la
+              Ley 29733 de Protección de Datos Personales.</span>
+          </label>
+          <label class="btn btn-primario" [class.deshabilitado]="!consentimiento() || registrandoRostro()">
+            @if (registrandoRostro()) { <span class="spinner"></span> Analizando tu rostro… } @else { <app-icon name="camara" [size]="16" /> Tomarme la foto }
+            <input type="file" accept="image/*" capture="user" hidden [disabled]="!consentimiento() || registrandoRostro()"
+              (change)="registrarRostro($event)" />
+          </label>
+        </div>
+      </article>
+    } @else if (miRostro()?.estado === 'PENDIENTE') {
+      <div class="rostro-aviso"><app-icon name="reloj" [size]="17" /> Tu foto de referencia está en revisión por RRHH.
+        Mientras tanto, tus marcaciones quedan pendientes de verificar.</div>
+    }
+
     @if (resumenMes(); as r) {
       <section class="grid-kpi escalonado">
         <app-stat-card style="--i: 0" titulo="Días asistidos este mes" [valor]="r.diasAsistidos" icono="checkCirculo" tono="exito"
@@ -112,7 +139,7 @@
       @if (tabla.filtradas().length) {
         <div class="tabla-contenedor" style="margin-top: 12px">
           <table class="tabla">
-            <thead><tr><th>Fecha</th><th>Tipo</th><th class="ocultar-movil">Registrada por</th><th class="right ocultar-movil">Distancia</th><th class="right">Hora</th><th class="right">Foto</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th class="ocultar-movil">Registrada por</th><th class="right ocultar-movil">Distancia</th><th class="right">Hora</th><th>Verificación</th><th class="right">Foto</th></tr></thead>
             <tbody>
               @for (m of tabla.visibles(); track m.id; let i = $index) {
                 <tr [style.--i]="i">
@@ -121,6 +148,12 @@
                   <td class="ink-2 ocultar-movil">{{ m.origen === 'PORTAL' ? 'Yo (celular)' : 'Recursos Humanos' }}</td>
                   <td class="right num ocultar-movil">{{ m.distanciaMetros !== null ? (m.distanciaMetros | number: '1.0-0') + ' m' : '—' }}</td>
                   <td class="right num">{{ m.fechaHora | date: 'HH:mm:ss' }}</td>
+                  <td>
+                    <span class="badge punto" [class.badge-exito]="m.verificacion === 'VERIFICADA'" [class.badge-alerta]="m.verificacion === 'PENDIENTE'"
+                      [class.badge-peligro]="m.verificacion === 'RECHAZADA'" [title]="m.verificacionMotivo ?? ''">
+                      {{ m.verificacion === 'VERIFICADA' ? 'Verificada' : m.verificacion === 'PENDIENTE' ? 'En revisión' : 'Rechazada' }}
+                    </span>
+                  </td>
                   <td class="right">
                     @if (m.fotoId) {
                       <button type="button" class="btn btn-sm btn-fantasma" (click)="fotoVista.set(m)" aria-label="Ver foto">

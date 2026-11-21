@@ -15,15 +15,15 @@ export const PERMISOS = {
   // Reportes de ventas por vendedor y por producto
   'ventas.reportes': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
 
-  // Almacén consulta las ventas para despacharlas con guía
-  'ventas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR', 'ALMACEN'],
+  // Almacén no ve ventas, clientes ni precios: trabaja con su lista de despacho (en Guías)
+  'ventas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
   // Emitir boletas y facturas: Administración y los vendedores
   'ventas.editar': ['ADMIN', 'ADMINISTRACION', 'VENDEDOR'],
   'ventas.anular': ['ADMIN', 'CONTABILIDAD'],
-  'clientes.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR', 'ALMACEN'],
+  'clientes.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
   'clientes.crear': ['ADMIN', 'ADMINISTRACION', 'VENDEDOR'],
   'clientes.editar': ['ADMIN', 'ADMINISTRACION'],
-  'productos.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR', 'ALMACEN'],
+  'productos.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION', 'VENDEDOR'],
   'productos.editar': ['ADMIN', 'ADMINISTRACION'],
   'notas.ver': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
   'notas.emitir': ['ADMIN', 'CONTABILIDAD', 'ADMINISTRACION'],
@@ -33,6 +33,8 @@ export const PERMISOS = {
   // Almacén mueve el stock (ingresos, salidas, conteos); quien vende o revisa lo consulta
   'inventario.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD', 'ALMACEN', 'VENDEDOR'],
   'inventario.mover': ['ADMIN', 'ADMINISTRACION', 'ALMACEN'],
+  // Alistar pedidos escaneando los productos con el celular
+  'despachos.alistar': ['ADMIN', 'ADMINISTRACION', 'ALMACEN'],
 
   'compras.ver': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],
   'compras.editar': ['ADMIN', 'ADMINISTRACION', 'CONTABILIDAD'],

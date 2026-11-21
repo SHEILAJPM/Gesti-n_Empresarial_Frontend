@@ -59,6 +59,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/comercial/reportes-ventas').then((m) => m.ReportesVentas)
       },
       {
+        path: 'despachos',
+        title: 'Alistar pedidos · Nexo',
+        data: { permiso: 'despachos.alistar' },
+        loadComponent: () => import('./features/abastecimiento/despachos').then((m) => m.Despachos)
+      },
+      {
+        path: 'despachos/:ventaId',
+        title: 'Alistar pedido · Nexo',
+        data: { permiso: 'despachos.alistar' },
+        loadComponent: () => import('./features/abastecimiento/alistar').then((m) => m.Alistar)
+      },
+      {
+        path: 'etiquetas',
+        title: 'Etiquetas · Nexo',
+        data: { permiso: 'inventario.ver' },
+        loadComponent: () => import('./features/abastecimiento/etiquetas').then((m) => m.Etiquetas)
+      },
+      {
         path: 'bitacora',
         title: 'Bitácora · Nexo',
         data: { permiso: 'bitacora.ver' },

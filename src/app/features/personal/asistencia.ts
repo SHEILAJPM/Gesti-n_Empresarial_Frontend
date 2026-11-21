@@ -11,6 +11,7 @@ import { colorAvatar, hoyIso, iniciales } from '../../shared/formato';
 import { Icon } from '../../shared/icon';
 import { Panel } from '../../shared/panel';
 import { StatCard } from '../../shared/stat-card';
+import { VerificacionFacial } from './verificacion-facial';
 import { TablaEstado } from '../../shared/tabla';
 
 interface FilaMarcacion extends Marcacion {
@@ -35,7 +36,7 @@ type Pestana = 'marcaciones' | 'intentos' | 'resumen';
 
 @Component({
   selector: 'app-asistencia',
-  imports: [DatePipe, DecimalPipe, PageHeader, StatCard, Icon, Paginador, Vacio, Panel, FotoAsistencia],
+  imports: [DatePipe, DecimalPipe, PageHeader, StatCard, Icon, Paginador, Vacio, Panel, FotoAsistencia, VerificacionFacial],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './asistencia.html',
   styleUrl: './asistencia.scss'

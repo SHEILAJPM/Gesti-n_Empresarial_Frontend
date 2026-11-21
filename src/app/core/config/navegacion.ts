@@ -57,6 +57,7 @@ export const MENU: GrupoMenu[] = [
   {
     titulo: 'Abastecimiento',
     items: [
+      { ruta: '/despachos', titulo: 'Alistar pedidos', icono: 'carrito', permiso: 'despachos.alistar' },
       { ruta: '/inventario', titulo: 'Inventario', icono: 'edificio', permiso: 'inventario.ver' },
       { ruta: '/compras', titulo: 'Compras', icono: 'carrito', permiso: 'compras.ver' },
       { ruta: '/proveedores', titulo: 'Proveedores', icono: 'camion', permiso: 'proveedores.ver' }

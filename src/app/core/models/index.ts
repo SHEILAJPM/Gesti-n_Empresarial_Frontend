@@ -45,6 +45,9 @@ export interface Trabajador {
   /* Turno propio (HH:mm:ss); null = horario de la sede */
   horaEntrada: string | null;
   horaSalida: string | null;
+  sedeId: number | null;
+  /* Jornada semanal (5 o 6 días): récord vacacional de 210 o 260 días */
+  diasPorSemana: number;
 }
 
 export interface TrabajadorRequest {
@@ -64,6 +67,7 @@ export interface TrabajadorRequest {
   numeroCuenta: string;
   horaEntrada: string | null;
   horaSalida: string | null;
+  diasPorSemana: number;
 }
 
 export interface CeseRequest {
@@ -83,6 +87,10 @@ export interface Marcacion {
   distanciaMetros: number | null;
   /* Foto tomada al marcar desde el celular; las registradas por RRHH no tienen */
   fotoId: number | null;
+  /* VERIFICADA: el rostro coincide · PENDIENTE: RRHH debe revisarla (no cuenta aún) · RECHAZADA */
+  verificacion: 'VERIFICADA' | 'PENDIENTE' | 'RECHAZADA';
+  verificacionMotivo: string | null;
+  distanciaFacial: number | null;
 }
 
 export interface IntentoMarcacion {
@@ -257,10 +265,12 @@ export interface Producto {
   manejaStock: boolean;
   stock: number;
   stockMinimo: number;
+  /* Código de barras de fábrica (EAN/UPC); el escáner de Almacén lo reconoce */
+  codigoBarras: string | null;
 }
 
 /* El stock no se edita en el catálogo: cambia con los movimientos de Inventario y con las ventas */
-export type ProductoRequest = Omit<Producto, 'id' | 'activo' | 'manejaStock' | 'stock'>;
+export type ProductoRequest = Omit<Producto, 'id' | 'activo' | 'manejaStock' | 'stock' | 'codigoBarras'> & { codigoBarras?: string | null };
 
 // ---------- Inventario ----------
 
@@ -280,6 +290,7 @@ export interface ProductoStock {
   stockMinimo: number;
   estado: EstadoStock;
   ultimoMovimiento: string | null;
+  codigoBarras: string | null;
 }
 
 export interface MovimientoStock {
@@ -741,6 +752,10 @@ export interface Ausencia {
   resueltaPor: string | null;
   resueltaEn: string | null;
   comentario: string | null;
+  /* Certificado médico o CITT adjunto */
+  documentoNombre: string | null;
+  /* Descanso médico que pasa de 20 días en el año: desde el día 21 lo subsidia EsSalud */
+  subsidioEssalud: boolean;
 }
 
 export interface AusenciaRequest {
@@ -749,6 +764,78 @@ export interface AusenciaRequest {
   desde: string;
   hasta: string;
   motivo: string | null;
+  /* Archivo en Base64 (data URL): obligatorio en el descanso médico */
+  documento?: string | null;
+  documentoNombre?: string | null;
+}
+
+// ---- Vacaciones según ley (D. Leg. 713) ----
+
+export type EstadoPeriodo = 'EN_CURSO' | 'SIN_RECORD' | 'DISPONIBLE' | 'POR_VENCER' | 'VENCIDO' | 'PROGRAMADO' | 'GOZADO';
+
+export interface PeriodoVacacional {
+  numero: number;
+  desde: string;
+  hasta: string;
+  /* Desde esta fecha tiene derecho a los 30 días */
+  derechoDesde: string;
+  /* Último día para gozarlos; después corresponde indemnización */
+  venceEl: string;
+  gozados: number;
+  programados: number;
+  solicitados: number;
+  saldo: number;
+  fraccionados: number;
+  diasEfectivos: number;
+  recordRequerido: number;
+  recordCumplido: boolean;
+  estado: EstadoPeriodo;
+  diasParaVencer: number;
+}
+
+export interface ResumenVacaciones {
+  trabajadorId: number;
+  nombres: string;
+  area: string | null;
+  fechaIngreso: string | null;
+  diasPorSemana: number;
+  disponibles: number;
+  solicitados: number;
+  periodos: PeriodoVacacional[];
+  alerta: string | null;
+  nivel: 'peligro' | 'alerta' | 'info' | 'ok';
+}
+
+// ---- Verificación facial ----
+
+export type EstadoRostro = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
+
+export interface MiRostro {
+  estado: EstadoRostro;
+  registradoEn: string;
+  motivoRechazo: string | null;
+}
+
+export interface RostroRegistrado {
+  trabajadorId: number;
+  nombres: string;
+  documento: string;
+  area: string | null;
+  estado: EstadoRostro;
+  registradoEn: string;
+}
+
+export interface MarcacionPorVerificar {
+  id: number;
+  trabajadorId: number;
+  nombres: string;
+  documento: string | null;
+  fechaHora: string;
+  tipo: TipoMarcacion;
+  motivo: string | null;
+  distanciaFacial: number | null;
+  fotoId: number | null;
+  tieneReferencia: boolean;
 }
 
 export interface SaldoVacaciones {
@@ -813,4 +900,42 @@ export interface VentaPorDespachar {
   lineas: number;
   total: number;
   emitidaPor: string | null;
+}
+
+/* Línea de un pedido por despachar (sin precios); alistado = lo ya sacado del estante */
+export interface LineaDespacho {
+  orden: number;
+  productoId: number | null;
+  codigo: string | null;
+  codigoBarras: string | null;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+  alistado: number;
+}
+
+export type EstadoAlistamiento = 'PENDIENTE' | 'EN_PROCESO' | 'LISTO';
+
+/* Pedido que Almacén debe alistar y despachar: productos y cantidades, sin precios */
+export interface Despacho {
+  ventaId: number;
+  numeroComprobante: string;
+  fecha: string;
+  documentoCliente: string;
+  cliente: string;
+  emitidaPor: string | null;
+  items: LineaDespacho[];
+  estadoAlistamiento: EstadoAlistamiento;
+  alistadoPor: string | null;
+  listoEn: string | null;
+  unidadesPedidas: number;
+  unidadesAlistadas: number;
+}
+
+export interface Escaneo {
+  despacho: Despacho;
+  producto: string;
+  alistado: number;
+  cantidad: number;
+  completo: boolean;
 }

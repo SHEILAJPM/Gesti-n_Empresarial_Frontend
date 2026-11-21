@@ -1,3 +1,4 @@
+import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -29,7 +30,7 @@ let siguienteClave = 1;
    Las ventas descuentan solas y las notas de crédito por devolución lo regresan. */
 @Component({
   selector: 'app-inventario',
-  imports: [DatePipe, PageHeader, StatCard, Icon, Panel, Paginador, Vacio],
+  imports: [DatePipe, RouterLink, PageHeader, StatCard, Icon, Panel, Paginador, Vacio],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './inventario.html',
   styleUrl: './inventario.scss'

@@ -5,7 +5,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
 import { AuthService } from '../../core/auth/auth.service';
-import { EstadoFacturacion, EstadoSunat, Guia, ModalidadTraslado, Producto, Venta, VentaPorDespachar } from '../../core/models';
+import { EstadoFacturacion, EstadoSunat, Guia, ModalidadTraslado, Producto, Venta, Despacho } from '../../core/models';
 import { ToastService } from '../../core/ui/toast.service';
 import { PageHeader, Paginador, Vacio } from '../../shared/bloques';
 import { hoyIso } from '../../shared/formato';
@@ -39,6 +39,7 @@ export class Guias {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   protected readonly puedeEmitir = inject(AuthService).puede('guias.emitir');
+  protected readonly puedeAlistar = inject(AuthService).puede('despachos.alistar');
   protected readonly hoy = hoyIso();
 
   /* ?venta=ID abre el formulario con el cliente y los bienes de esa venta (botón «Guía» en Ventas) */
@@ -61,7 +62,8 @@ export class Guias {
 
   // ---------- Formulario ----------
   protected readonly abierto = signal(false);
-  protected readonly ventaOrigen = signal<Venta | null>(null);
+  /* Venta de la que sale la guía (datos de despacho, sin precios) */
+  protected readonly ventaOrigen = signal<{ id: number; numeroComprobante: string; nombreCliente: string } | null>(null);
   protected readonly motivo = signal('01');
   protected readonly fechaTraslado = signal(this.hoy);
   protected readonly destinatarioDocumento = signal('');
@@ -134,10 +136,11 @@ export class Guias {
   }
 
   /* Ventas con mercadería que aún no tienen guía: lo que Almacén tiene que despachar */
-  protected readonly porDespachar = signal<VentaPorDespachar[]>([]);
+  protected readonly porDespachar = signal<Despacho[]>([]);
 
   private cargarPorDespachar(): void {
-    this.api.reportesVentas.porDespachar().subscribe({ next: (l) => this.porDespachar.set(l), error: () => this.porDespachar.set([]) });
+    if (!this.puedeEmitir) return;
+    this.api.despachos.pendientes().subscribe({ next: (l) => this.porDespachar.set(l), error: () => this.porDespachar.set([]) });
   }
 
   protected abrir(): void {
@@ -149,13 +152,13 @@ export class Guias {
   }
 
   private abrirDesdeVenta(id: number): void {
-    this.api.ventas.obtener(id).subscribe({
+    this.api.despachos.obtener(id).subscribe({
       next: (v) => {
         this.limpiar();
-        this.ventaOrigen.set(v);
+        this.ventaOrigen.set({ id: v.ventaId, numeroComprobante: v.numeroComprobante, nombreCliente: v.cliente });
         this.motivo.set('01');
         this.destinatarioDocumento.set(v.documentoCliente);
-        this.destinatarioNombre.set(v.nombreCliente);
+        this.destinatarioNombre.set(v.cliente);
         const bienes = v.items.filter((i) => !SIN_TRASLADO.includes(i.unidad))
           .map((i) => ({ clave: clave++, codigo: i.codigo, descripcion: i.descripcion, unidad: i.unidad, cantidad: i.cantidad }));
         this.bienes.set(bienes.length ? bienes : [{ clave: clave++, codigo: null, descripcion: '', unidad: 'NIU', cantidad: 1 }]);

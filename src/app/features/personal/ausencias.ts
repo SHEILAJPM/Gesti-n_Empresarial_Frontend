@@ -4,7 +4,8 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { mensajeDeError } from '../../core/api/errores';
-import { Ausencia, EstadoAusencia, TIPOS_AUSENCIA, TipoAusencia, Trabajador } from '../../core/models';
+import { Ausencia, EstadoAusencia, EstadoPeriodo, ResumenVacaciones, TIPOS_AUSENCIA, TipoAusencia, Trabajador } from '../../core/models';
+import { leerArchivo } from '../../shared/rostro';
 import { ConfirmService } from '../../core/ui/confirm.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { ErrorCampo, PageHeader, Paginador, Vacio } from '../../shared/bloques';
@@ -21,13 +22,26 @@ export const ESTADO_AUSENCIA: Record<EstadoAusencia, { texto: string; clase: str
   ANULADA: { texto: 'Anulada', clase: '' }
 };
 
-type Pestana = 'pendientes' | 'aprobadas' | 'todas';
+/* Estado de cada periodo vacacional (D. Leg. 713) */
+export const ESTADO_PERIODO: Record<EstadoPeriodo, { texto: string; clase: string }> = {
+  EN_CURSO: { texto: 'Acumulando', clase: '' },
+  SIN_RECORD: { texto: 'Sin récord', clase: 'badge-alerta' },
+  DISPONIBLE: { texto: 'Disponible', clase: 'badge-info' },
+  POR_VENCER: { texto: 'Por vencer', clase: 'badge-peligro' },
+  VENCIDO: { texto: 'Vencido · indemnización', clase: 'badge-peligro' },
+  PROGRAMADO: { texto: 'Programado', clase: 'badge-exito' },
+  GOZADO: { texto: 'Gozado', clase: 'badge-exito' }
+};
+
+type Pestana = 'pendientes' | 'aprobadas' | 'todas' | 'rol';
 
 /* RRHH: aprueba o rechaza lo que piden los trabajadores y registra ausencias ya aprobadas (justificar faltas) */
 @Component({
   selector: 'app-ausencias',
   imports: [DatePipe, ReactiveFormsModule, PageHeader, StatCard, Icon, Panel, Paginador, Vacio, ErrorCampo],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `.enlace { display: inline-flex; gap: 4px; align-items: center; margin-top: 4px; background: none; border: 0; padding: 0;
+    font: inherit; font-size: 12.5px; color: var(--brand); cursor: pointer; }`,
   template: `
     <div class="pila">
       <app-page-header seccion="Recursos humanos" titulo="Vacaciones y permisos"
@@ -50,6 +64,66 @@ type Pestana = 'pendientes' | 'aprobadas' | 'todas';
             </button>
           }
         </nav>
+        @if (pestana() === 'rol') {
+          <p class="muted" style="margin: 0; padding: 12px 20px 0; font-size: 13px">
+            30 días por cada año completo de servicio. Deben gozarse dentro del año siguiente; si no, se paga una indemnización
+            (D. Leg. 713). Pulsa un trabajador para ver sus periodos.</p>
+          <div class="tabla-contenedor">
+            <table class="tabla">
+              <thead><tr><th>Trabajador</th><th>Ingreso</th><th class="right">Disponibles</th><th class="right">Solicitados</th><th>Situación</th><th class="right"></th></tr></thead>
+              <tbody>
+                @for (r of rol(); track r.trabajadorId) {
+                  <tr (click)="abiertoRol.set(abiertoRol() === r.trabajadorId ? null : r.trabajadorId)" style="cursor: pointer">
+                    <td>
+                      <div class="celda-persona">
+                        <span class="avatar" [style.background]="colorAvatar(r.nombres)">{{ iniciales(r.nombres) }}</span>
+                        <div><strong>{{ r.nombres }}</strong><small>{{ r.area || '—' }} · {{ r.diasPorSemana }} días/semana</small></div>
+                      </div>
+                    </td>
+                    <td class="nowrap">{{ r.fechaIngreso | date: 'd MMM y' }}</td>
+                    <td class="right num"><strong>{{ r.disponibles }}</strong></td>
+                    <td class="right num">{{ r.solicitados }}</td>
+                    <td>
+                      @if (r.alerta) {
+                        <span class="badge punto" [class.badge-peligro]="r.nivel === 'peligro'" [class.badge-alerta]="r.nivel === 'alerta'"
+                          [class.badge-info]="r.nivel === 'info'">{{ r.alerta }}</span>
+                      } @else { <span class="muted">Al día</span> }
+                    </td>
+                    <td class="right">
+                      @if (r.disponibles > 0) {
+                        <button type="button" class="btn btn-sm" (click)="$event.stopPropagation(); programar(r)">Programar</button>
+                      }
+                    </td>
+                  </tr>
+                  @if (abiertoRol() === r.trabajadorId) {
+                    <tr><td colspan="6" style="background: var(--surface-2)">
+                      <table class="tabla" style="margin: 4px 0">
+                        <thead><tr><th>Periodo</th><th>Derecho desde</th><th>Gozar hasta</th><th class="right">Gozados</th><th class="right">Programados</th>
+                          <th class="right">Saldo</th><th class="right">Días efectivos</th><th>Estado</th></tr></thead>
+                        <tbody>
+                          @for (p of r.periodos; track p.numero) {
+                            <tr>
+                              <td class="nowrap">{{ p.numero }} · {{ p.desde | date: 'd/MM/yy' }} – {{ p.hasta | date: 'd/MM/yy' }}</td>
+                              <td class="nowrap">{{ p.derechoDesde | date: 'd MMM y' }}</td>
+                              <td class="nowrap">{{ p.estado === 'EN_CURSO' ? '—' : (p.venceEl | date: 'd MMM y') }}</td>
+                              <td class="right num">{{ p.gozados }}</td>
+                              <td class="right num">{{ p.programados + p.solicitados }}</td>
+                              <td class="right num"><strong>{{ p.saldo }}</strong></td>
+                              <td class="right num" [title]="'Récord requerido: ' + p.recordRequerido">{{ p.diasEfectivos }}/{{ p.recordRequerido }}</td>
+                              <td><span class="badge punto" [class]="estadosPeriodo[p.estado].clase">{{ estadosPeriodo[p.estado].texto }}</span></td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </td></tr>
+                  }
+                } @empty {
+                  <tr><td colspan="6" class="muted">No hay trabajadores activos con fecha de ingreso.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
         <div class="filtros">
           <div class="control-icono busqueda">
             <app-icon name="buscar" [size]="16" />
@@ -76,6 +150,10 @@ type Pestana = 'pendientes' | 'aprobadas' | 'todas';
                     </td>
                     <td>
                       {{ a.tipoTexto }} @if (!a.conGoce) { <span class="badge badge-alerta">sin goce</span> }
+                      @if (a.subsidioEssalud) { <span class="badge badge-info" title="Pasa de 20 días en el año: desde el día 21 lo subsidia EsSalud">subsidio EsSalud</span> }
+                      @if (a.documentoNombre) {
+                        <button type="button" class="enlace" (click)="verDocumento(a)"><app-icon name="documento" [size]="13" /> {{ a.documentoNombre }}</button>
+                      } @else if (a.tipo === 'DESCANSO_MEDICO') { <small style="display: block; color: var(--danger)">Sin certificado adjunto</small> }
                       @if (a.motivo) { <small class="muted" style="display: block">{{ a.motivo }}</small> }
                     </td>
                     <td class="nowrap">{{ a.desde | date: 'd MMM' }} – {{ a.hasta | date: 'd MMM y' }}
@@ -105,6 +183,7 @@ type Pestana = 'pendientes' | 'aprobadas' | 'todas';
         } @else {
           <app-vacio icono="maleta" [titulo]="pestana() === 'pendientes' ? 'Nada por aprobar' : 'Sin ausencias'"
             texto="Las solicitudes de los trabajadores llegan aquí." />
+        }
         }
       </article>
     </div>
@@ -139,6 +218,13 @@ type Pestana = 'pendientes' | 'aprobadas' | 'todas';
             @for (t of tipos; track t.valor) { <option [value]="t.valor">{{ t.texto }} — {{ t.ayuda }}</option> }
           </select>
         </div>
+        @if (form.controls.tipo.value === 'DESCANSO_MEDICO') {
+          <div class="campo completo">
+            <label for="ra-doc">Certificado médico o CITT <span style="color: var(--danger)">*</span></label>
+            <input id="ra-doc" type="file" class="control" accept="application/pdf,image/jpeg,image/png" (change)="elegirDocumento($event)" />
+            <small class="muted">{{ documentoNombre() || 'PDF o foto, hasta 5 MB' }}</small>
+          </div>
+        }
         <div class="campo"><label for="ra-desde">Desde</label><input id="ra-desde" type="date" class="control" formControlName="desde" /></div>
         <div class="campo"><label for="ra-hasta">Hasta</label><input id="ra-hasta" type="date" class="control" formControlName="hasta" /></div>
         <div class="campo completo">
@@ -171,14 +257,19 @@ export class Ausencias {
   protected readonly pestanas: { id: Pestana; titulo: string }[] = [
     { id: 'pendientes', titulo: 'Por aprobar' },
     { id: 'aprobadas', titulo: 'Aprobadas' },
-    { id: 'todas', titulo: 'Todas' }
+    { id: 'todas', titulo: 'Todas' },
+    { id: 'rol', titulo: 'Rol vacacional' }
   ];
 
   protected readonly conteo = computed(() => ({
     pendientes: this.ausencias().filter((a) => a.estado === 'PENDIENTE').length,
     aprobadas: this.ausencias().filter((a) => a.estado === 'APROBADA').length,
-    todas: this.ausencias().length
+    todas: this.ausencias().length,
+    rol: this.rol().filter((r) => r.nivel === 'peligro' || r.nivel === 'alerta').length
   }));
+  protected readonly rol = signal<ResumenVacaciones[]>([]);
+  protected readonly estadosPeriodo = ESTADO_PERIODO;
+  protected readonly abiertoRol = signal<number | null>(null);
   protected readonly ausentesHoy = computed(() => {
     const hoy = hoyIso();
     return this.ausencias().filter((a) => a.estado === 'APROBADA' && a.desde <= hoy && a.hasta >= hoy).length;
@@ -208,9 +299,11 @@ export class Ausencias {
   }
 
   private cargar(): void {
-    forkJoin({ ausencias: this.api.ausencias.listar(), trabajadores: this.api.personal.listar() }).subscribe({
-      next: ({ ausencias, trabajadores }) => {
+    forkJoin({ ausencias: this.api.ausencias.listar(), trabajadores: this.api.personal.listar(), rol: this.api.ausencias.rolVacacional() }).subscribe({
+      next: ({ ausencias, trabajadores, rol }) => {
         this.ausencias.set(ausencias);
+        this.rol.set(rol);
+        if (rol.some((r) => r.nivel === 'peligro') && !ausencias.some((a) => a.estado === 'PENDIENTE')) this.pestana.set('rol');
         this.trabajadores.set(trabajadores.filter((t) => t.estado === 'ACTIVO').sort((a, b) => a.nombres.localeCompare(b.nombres, 'es')));
         this.cargando.set(false);
       },
@@ -265,7 +358,36 @@ export class Ausencias {
     });
   }
 
+  private readonly documento = signal<string | null>(null);
+  protected readonly documentoNombre = signal('');
+
+  protected async elegirDocumento(evento: Event): Promise<void> {
+    const archivo = (evento.target as HTMLInputElement).files?.[0];
+    if (!archivo) return;
+    if (archivo.size > 5 * 1024 * 1024) {
+      this.toast.error('El documento pesa más de 5 MB.');
+      return;
+    }
+    this.documento.set(await leerArchivo(archivo));
+    this.documentoNombre.set(archivo.name);
+  }
+
+  protected verDocumento(a: Ausencia): void {
+    this.api.ausencias.documento(a.id).subscribe({
+      next: (blob) => window.open(URL.createObjectURL(blob), '_blank'),
+      error: (e) => this.toast.error(mensajeDeError(e))
+    });
+  }
+
+  /* Abre el registro de vacaciones para ese trabajador */
+  protected programar(r: ResumenVacaciones): void {
+    this.abrir();
+    this.form.patchValue({ trabajadorId: r.trabajadorId, tipo: 'VACACIONES' });
+  }
+
   protected abrir(): void {
+    this.documento.set(null);
+    this.documentoNombre.set('');
     this.form.reset({ trabajadorId: 0, tipo: 'DESCANSO_MEDICO', desde: hoyIso(), hasta: hoyIso(), motivo: '' });
     this.panelAbierto.set(true);
   }
@@ -279,10 +401,13 @@ export class Ausencias {
     }
     this.guardando.set(true);
     this.api.ausencias
-      .registrar({ trabajadorId: Number(v.trabajadorId), tipo: v.tipo, desde: v.desde, hasta: v.hasta, motivo: v.motivo.trim() || null })
+      .registrar({ trabajadorId: Number(v.trabajadorId), tipo: v.tipo, desde: v.desde, hasta: v.hasta, motivo: v.motivo.trim() || null,
+        documento: v.tipo === 'DESCANSO_MEDICO' ? this.documento() : null,
+        documentoNombre: v.tipo === 'DESCANSO_MEDICO' ? this.documentoNombre() : null })
       .subscribe({
         next: (a) => {
           this.ausencias.update((lista) => [a, ...lista]);
+          this.api.ausencias.rolVacacional().subscribe((rol) => this.rol.set(rol));
           this.toast.exito(`${a.tipoTexto} registrada para ${a.trabajador}.`);
           this.panelAbierto.set(false);
           this.guardando.set(false);
